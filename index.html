@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel da Partida</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Painel simples de resultado</p>
+        <h1>Atl&eacute;tico Itarar&eacute; x Kawasaki Joinville</h1>
+        <p class="hero-copy">Crie a partida, registre lances em tempo real e acompanhe o hist&oacute;rico das &uacute;ltimas 5 decis&otilde;es.</p>
+      </div>
+      <div class="hero-actions">
+        <label class="hero-select">
+          Time da casa
+          <select id="homeTeamPicker">
+            <option value="Atl&#233;tico Itarar&#233;">Atl&eacute;tico Itarar&eacute;</option>
+            <option value="Kawasaki Joinville">Kawasaki Joinville</option>
+          </select>
+        </label>
+        <button id="createMatchBtn" class="primary-button">Criar partida</button>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <section class="card live-card">
+        <div class="section-header">
+          <div>
+            <p class="section-kicker">Ao vivo</p>
+            <h2>Partida atual</h2>
+          </div>
+          <span id="matchStatus" class="status-badge idle">Aguardando in&iacute;cio</span>
+        </div>
+
+        <div class="scoreboard">
+          <article class="team-panel">
+            <span class="team-label home">Casa</span>
+            <img
+              id="homeCrest"
+              class="team-crest"
+              src="https://upload.wikimedia.org/wikipedia/pt/b/b4/Corinthians_simbolo.png"
+              alt="Escudo do Atletico Itarare"
+            >
+            <h3 id="homeTeamName">Atl&eacute;tico Itarar&eacute;</h3>
+            <strong id="homeScore" class="score">0</strong>
+            <p id="homeChance" class="win-chance">Chance de vitoria: 50%</p>
+            <p id="homeForm" class="team-form">&Uacute;ltimas 5: sem partidas</p>
+          </article>
+
+          <div class="versus-block">
+            <p class="minute-label">Minuto atual</p>
+            <strong id="currentMinute" class="current-minute">--</strong>
+            <span class="vs">VS</span>
+          </div>
+
+          <article class="team-panel">
+            <span class="team-label away">Visitante</span>
+            <img
+              id="awayCrest"
+              class="team-crest"
+              src="https://www.frontale.co.jp/common_2017/emblems/kf_emblem.png"
+              alt="Escudo do Kawasaki Joinville"
+            >
+            <h3 id="awayTeamName">Kawasaki Joinville</h3>
+            <strong id="awayScore" class="score">0</strong>
+            <p id="awayChance" class="win-chance">Chance de vitoria: 50%</p>
+            <p id="awayForm" class="team-form">&Uacute;ltimas 5: sem partidas</p>
+          </article>
+        </div>
+
+        <div id="matchControls" class="match-controls disabled">
+          <div class="control-grid">
+            <label>
+              Time
+              <select id="teamSelect">
+                <option value="Atl&#233;tico Itarar&#233;">Atl&eacute;tico Itarar&eacute;</option>
+                <option value="Kawasaki Joinville">Kawasaki Joinville</option>
+              </select>
+            </label>
+
+            <label>
+              Tipo de evento
+              <select id="eventType">
+                <option value="goal">Gol</option>
+                <option value="yellow">Cart&atilde;o amarelo</option>
+                <option value="red">Cart&atilde;o vermelho</option>
+                <option value="missedPenalty">P&ecirc;nalti perdido</option>
+              </select>
+            </label>
+
+            <label>
+              Jogador
+              <input id="playerName" type="text" placeholder="Nome do jogador">
+            </label>
+
+            <label>
+              Minuto
+              <input id="eventMinute" type="number" min="1" max="130" placeholder="Ex.: 67">
+            </label>
+          </div>
+
+          <div id="penaltyControls" class="penalty-controls hidden">
+            <label>
+              Penaltis Atletico Itarare
+              <input id="homePenaltyScore" type="number" min="0" max="20" placeholder="Ex.: 5">
+            </label>
+
+            <label>
+              Penaltis Kawasaki Joinville
+              <input id="awayPenaltyScore" type="number" min="0" max="20" placeholder="Ex.: 3">
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button id="addEventBtn" class="secondary-button">Adicionar evento</button>
+            <button id="continueMatchBtn" class="secondary-button hidden">Continuar jogo</button>
+            <button id="finishMatchBtn" class="danger-button">Finalizar partida</button>
+          </div>
+        </div>
+
+        <div class="timeline-wrap">
+          <div class="section-header compact">
+            <h3>Eventos da partida</h3>
+          </div>
+          <ul id="eventsList" class="events-list empty-state">
+            <li>Nenhuma partida em andamento.</li>
+          </ul>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="card stats-card">
+          <button id="toggleStatsBtn" class="accordion-button" type="button" aria-expanded="false">
+            <span>Resumo geral</span>
+            <span id="statsChevron" class="accordion-chevron">+</span>
+          </button>
+          <div id="overallStats" class="stats-grid hidden">
+            <article class="stat-box">
+              <span class="stat-label">Total de confrontos</span>
+              <strong id="totalMatchesStat" class="stat-value">0</strong>
+            </article>
+            <article class="stat-box">
+              <span class="stat-label">Atletico Itarare</span>
+              <strong id="homeWinsStat" class="stat-value">0</strong>
+              <span id="homeRateStat" class="stat-meta">Taxa de vitoria: 0%</span>
+            </article>
+            <article class="stat-box">
+              <span class="stat-label">Kawasaki Joinville</span>
+              <strong id="awayWinsStat" class="stat-value">0</strong>
+              <span id="awayRateStat" class="stat-meta">Taxa de vitoria: 0%</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="card history-card">
+          <div class="section-header compact">
+            <div>
+              <p class="section-kicker">Hist&oacute;rico</p>
+              <h2>&Uacute;ltimas 5 partidas</h2>
+            </div>
+          </div>
+          <ul id="historyList" class="history-list empty-state">
+            <li>Nenhuma partida finalizada ainda.</li>
+          </ul>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
