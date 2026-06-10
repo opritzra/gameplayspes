@@ -1,4 +1,4 @@
-const { put, list } = require("@vercel/blob");
+const { put, list, head, download } = require("@vercel/blob");
 
 const HISTORY_PREFIX = "history/";
 
@@ -30,7 +30,7 @@ module.exports = async function handler(req, res) {
 
       const pathname = `${HISTORY_PREFIX}history-${Date.now()}.txt`;
       await put(pathname, JSON.stringify(history), {
-        access: "public",
+        access: "private",
         addRandomSuffix: false,
         cacheControlMaxAge: 0,
       });
@@ -59,18 +59,21 @@ async function readLatestHistory() {
     return [];
   }
 
-  const response = await fetch(`${blobs[0].url}?v=${Date.now()}`, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error("Could not download latest history file.");
-  }
-
-  const raw = await response.text();
+  const latestPathname = blobs[0].pathname || await resolvePathnameFromUrl(blobs[0].url);
+  const blob = await download(latestPathname);
+  const raw = await blob.text();
   if (!raw.trim()) {
     return [];
   }
 
   return JSON.parse(raw);
+}
+
+async function resolvePathnameFromUrl(url) {
+  const metadata = await head(url);
+  if (!metadata?.pathname) {
+    throw new Error("Could not resolve blob pathname.");
+  }
+
+  return metadata.pathname;
 }
