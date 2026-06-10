@@ -393,7 +393,8 @@ select {
 
 .primary-button,
 .secondary-button,
-.danger-button {
+.danger-button,
+.ghost-button {
   border: 0;
   border-radius: 16px;
   font-weight: 700;
@@ -403,7 +404,8 @@ select {
 
 .primary-button:hover,
 .secondary-button:hover,
-.danger-button:hover {
+.danger-button:hover,
+.ghost-button:hover {
   transform: translateY(-1px);
 }
 
@@ -415,7 +417,8 @@ select {
 }
 
 .secondary-button,
-.danger-button {
+.danger-button,
+.ghost-button {
   padding: 14px 18px;
 }
 
@@ -431,6 +434,17 @@ select {
 .danger-button {
   background: var(--danger);
   color: #fff;
+}
+
+.ghost-button {
+  background: #edf4e9;
+  color: var(--accent-strong);
+}
+
+.ghost-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .timeline-wrap {
@@ -566,6 +580,35 @@ select {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+}
+
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.history-delete {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 0;
+  background: #fde3df;
+  color: #8c2a2a;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.history-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pagination-info {
+  color: var(--muted);
+  font-weight: 700;
+  text-align: center;
 }
 
 @media (max-width: 960px) {
@@ -727,6 +770,15 @@ select {
   .history-list,
   .stats-grid {
     gap: 10px;
+  }
+
+  .history-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pagination-info {
+    order: -1;
   }
 
   .event-item,

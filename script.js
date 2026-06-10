@@ -16,6 +16,10 @@ const currentMinute = document.getElementById("currentMinute");
 const matchControls = document.getElementById("matchControls");
 const eventsList = document.getElementById("eventsList");
 const historyList = document.getElementById("historyList");
+const historyPagination = document.getElementById("historyPagination");
+const prevHistoryBtn = document.getElementById("prevHistoryBtn");
+const nextHistoryBtn = document.getElementById("nextHistoryBtn");
+const historyPageInfo = document.getElementById("historyPageInfo");
 const homeForm = document.getElementById("homeForm");
 const awayForm = document.getElementById("awayForm");
 const homeChance = document.getElementById("homeChance");
@@ -41,6 +45,8 @@ let activeMatch = null;
 let history = [];
 let selectedHomeTeam = TEAM_HOME;
 let statsOpen = false;
+let historyPage = 1;
+const HISTORY_PAGE_SIZE = 5;
 
 const eventLabels = {
   goal: "Gol",
@@ -66,6 +72,8 @@ addEventBtn.addEventListener("click", addEvent);
 continueMatchBtn.addEventListener("click", continueMatch);
 finishMatchBtn.addEventListener("click", finishMatch);
 toggleStatsBtn.addEventListener("click", toggleStats);
+prevHistoryBtn.addEventListener("click", () => changeHistoryPage(-1));
+nextHistoryBtn.addEventListener("click", () => changeHistoryPage(1));
 
 renderHistory();
 renderForms();
@@ -223,6 +231,7 @@ async function persistFinishedMatch() {
   };
 
   history.unshift(finishedMatch);
+  historyPage = 1;
   await saveHistory(history);
 
   activeMatch = null;
@@ -307,17 +316,20 @@ function renderActiveMatch() {
 }
 
 function renderHistory() {
-  const recentHistory = getRecentHistory();
+  const paginatedHistory = getPaginatedHistory();
+  const totalPages = getHistoryTotalPages();
 
-  if (recentHistory.length === 0) {
+  if (history.length === 0) {
     historyList.className = "history-list empty-state";
     historyList.innerHTML = "<li>Nenhuma partida finalizada ainda.</li>";
+    historyPagination.classList.add("hidden");
     return;
   }
 
   historyList.className = "history-list";
-  historyList.innerHTML = recentHistory
+  historyList.innerHTML = paginatedHistory
     .map((match) => {
+      const matchIndex = history.findIndex((item) => item.endedAt === match.endedAt && item.startedAt === match.startedAt);
       const homeGoals = match.score[match.homeTeam];
       const awayGoals = match.score[match.awayTeam];
 
@@ -331,10 +343,25 @@ function renderHistory() {
             ${describeDate(match.endedAt)} - ${getPhaseLabel(match.phase)}<br>
             Atl&eacute;tico Itarar&eacute;: ${getTeamOutcome(match, TEAM_HOME)} | Kawasaki Joinville: ${getTeamOutcome(match, TEAM_AWAY)}
           </div>
+          <div class="history-actions">
+            <button class="history-delete" type="button" data-history-index="${matchIndex}">Excluir partida</button>
+          </div>
         </li>
       `;
     })
     .join("");
+
+  historyPagination.classList.toggle("hidden", totalPages <= 1);
+  historyPageInfo.textContent = `Pagina ${historyPage} de ${totalPages}`;
+  prevHistoryBtn.disabled = historyPage <= 1;
+  nextHistoryBtn.disabled = historyPage >= totalPages;
+
+  historyList.querySelectorAll(".history-delete").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.historyIndex);
+      deleteHistoryMatch(index);
+    });
+  });
 }
 
 function renderForms() {
@@ -482,6 +509,57 @@ function calculateRate(wins, total) {
   return Math.round((wins / total) * 100);
 }
 
+function getHistoryTotalPages() {
+  return Math.max(1, Math.ceil(history.length / HISTORY_PAGE_SIZE));
+}
+
+function getPaginatedHistory() {
+  const start = (historyPage - 1) * HISTORY_PAGE_SIZE;
+  return history.slice(start, start + HISTORY_PAGE_SIZE);
+}
+
+function changeHistoryPage(direction) {
+  const nextPage = historyPage + direction;
+  const totalPages = getHistoryTotalPages();
+
+  if (nextPage < 1 || nextPage > totalPages) {
+    return;
+  }
+
+  historyPage = nextPage;
+  renderHistory();
+}
+
+async function deleteHistoryMatch(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= history.length) {
+    return;
+  }
+
+  const confirmed = window.confirm("Tem certeza que deseja excluir esta partida?");
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    history.splice(index, 1);
+    const totalPages = getHistoryTotalPages();
+    if (historyPage > totalPages) {
+      historyPage = totalPages;
+    }
+
+    await saveHistory(history);
+    renderHistory();
+    renderForms();
+    renderChances();
+    renderOverallStats();
+    renderActiveMatch();
+  } catch (error) {
+    console.error(error);
+    alert("Nao foi possivel excluir a partida do historico remoto.");
+    await initializeHistory();
+  }
+}
+
 function getCurrentMinute(match) {
   if (match.events.length === 0) return "00";
   return String(Math.max(...match.events.map((event) => event.minute))).padStart(2, "0");
@@ -627,7 +705,7 @@ function syncCrest(element, team) {
 }
 
 function getRecentHistory() {
-  return history.slice(0, 5);
+  return history.slice(0, HISTORY_PAGE_SIZE);
 }
 
 async function initializeHistory() {
