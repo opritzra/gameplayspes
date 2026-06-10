@@ -24,6 +24,10 @@ const homeForm = document.getElementById("homeForm");
 const awayForm = document.getElementById("awayForm");
 const homeChance = document.getElementById("homeChance");
 const awayChance = document.getElementById("awayChance");
+const historyTokenInput = document.getElementById("historyTokenInput");
+const importTokenBtn = document.getElementById("importTokenBtn");
+const generateTokenBtn = document.getElementById("generateTokenBtn");
+const copyTokenBtn = document.getElementById("copyTokenBtn");
 const toggleStatsBtn = document.getElementById("toggleStatsBtn");
 const statsChevron = document.getElementById("statsChevron");
 const overallStats = document.getElementById("overallStats");
@@ -40,9 +44,10 @@ const playerName = document.getElementById("playerName");
 const eventMinute = document.getElementById("eventMinute");
 const homePenaltyScore = document.getElementById("homePenaltyScore");
 const awayPenaltyScore = document.getElementById("awayPenaltyScore");
+const STORAGE_KEY = "elgamepreidepes-history";
 
 let activeMatch = null;
-let history = [];
+let history = loadHistory();
 let selectedHomeTeam = TEAM_HOME;
 let statsOpen = false;
 let historyPage = 1;
@@ -74,13 +79,16 @@ finishMatchBtn.addEventListener("click", finishMatch);
 toggleStatsBtn.addEventListener("click", toggleStats);
 prevHistoryBtn.addEventListener("click", () => changeHistoryPage(-1));
 nextHistoryBtn.addEventListener("click", () => changeHistoryPage(1));
+importTokenBtn.addEventListener("click", importHistoryToken);
+generateTokenBtn.addEventListener("click", generateHistoryToken);
+copyTokenBtn.addEventListener("click", copyHistoryToken);
 
 renderHistory();
 renderForms();
 renderChances();
 renderOverallStats();
 renderActiveMatch();
-initializeHistory();
+generateHistoryToken();
 
 function startMatch() {
   const homeTeam = selectedHomeTeam;
@@ -198,7 +206,7 @@ async function finishMatch() {
     await persistFinishedMatch();
   } catch (error) {
     console.error(error);
-    alert(getErrorMessage(error, "Nao foi possivel salvar a partida no historico remoto."));
+    alert(getErrorMessage(error, "Nao foi possivel salvar a partida no historico local."));
   }
 }
 
@@ -232,7 +240,7 @@ async function persistFinishedMatch() {
 
   history.unshift(finishedMatch);
   historyPage = 1;
-  await saveHistory(history);
+  saveHistory(history);
 
   activeMatch = null;
   renderActiveMatch();
@@ -240,6 +248,7 @@ async function persistFinishedMatch() {
   renderForms();
   renderChances();
   renderOverallStats();
+  generateHistoryToken();
 }
 
 function getMatchResult(match) {
@@ -547,16 +556,16 @@ async function deleteHistoryMatch(index) {
       historyPage = totalPages;
     }
 
-    await saveHistory(history);
+    saveHistory(history);
     renderHistory();
     renderForms();
     renderChances();
     renderOverallStats();
     renderActiveMatch();
+    generateHistoryToken();
   } catch (error) {
     console.error(error);
-    alert(getErrorMessage(error, "Nao foi possivel excluir a partida do historico remoto."));
-    await initializeHistory();
+    alert(getErrorMessage(error, "Nao foi possivel excluir a partida do historico local."));
   }
 }
 
@@ -708,49 +717,85 @@ function getRecentHistory() {
   return history.slice(0, HISTORY_PAGE_SIZE);
 }
 
-async function initializeHistory() {
+function loadHistory() {
   try {
-    const response = await fetch("/api/history", {
-      cache: "no-store",
-    });
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
 
-    if (!response.ok) {
-      throw new Error(await readApiError(response, "Nao foi possivel carregar o historico remoto."));
+function saveHistory(matches) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(matches));
+}
+
+function generateHistoryToken() {
+  try {
+    const payload = {
+      version: 1,
+      history,
+    };
+    historyTokenInput.value = encodeToken(payload);
+    return historyTokenInput.value;
+  } catch (error) {
+    console.error(error);
+    alert("Nao foi possivel gerar o token do historico.");
+    return "";
+  }
+}
+
+function importHistoryToken() {
+  const token = historyTokenInput.value.trim();
+
+  if (!token) {
+    alert("Cole um token antes de importar.");
+    return;
+  }
+
+  try {
+    const payload = decodeToken(token);
+    if (!Array.isArray(payload?.history)) {
+      throw new Error("Token invalido.");
     }
 
-    const data = await response.json();
-    history = Array.isArray(data.history) ? data.history : [];
+    history = payload.history;
+    historyPage = 1;
+    saveHistory(history);
     renderHistory();
     renderForms();
     renderChances();
     renderOverallStats();
     renderActiveMatch();
+    generateHistoryToken();
+    alert("Historico importado com sucesso.");
   } catch (error) {
     console.error(error);
+    alert(getErrorMessage(error, "Nao foi possivel importar o token."));
   }
 }
 
-async function saveHistory(matches) {
-  const response = await fetch("/api/history", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ history: matches }),
-  });
+async function copyHistoryToken() {
+  const token = historyTokenInput.value.trim() || generateHistoryToken();
+  if (!token) return;
 
-  if (!response.ok) {
-    throw new Error(await readApiError(response, "Nao foi possivel salvar o historico remoto."));
-  }
-}
-
-async function readApiError(response, fallbackMessage) {
   try {
-    const data = await response.json();
-    return [data.error, data.details].filter(Boolean).join(" ");
-  } catch {
-    return fallbackMessage;
+    await navigator.clipboard.writeText(token);
+    alert("Token copiado.");
+  } catch (error) {
+    console.error(error);
+    alert("Nao foi possivel copiar. Copie manualmente pelo campo.");
   }
+}
+
+function encodeToken(payload) {
+  const json = JSON.stringify(payload);
+  return btoa(unescape(encodeURIComponent(json)));
+}
+
+function decodeToken(token) {
+  const json = decodeURIComponent(escape(atob(token)));
+  return JSON.parse(json);
 }
 
 function getErrorMessage(error, fallbackMessage) {

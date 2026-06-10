@@ -136,6 +136,23 @@
       </section>
 
       <aside class="sidebar">
+        <section class="card share-card">
+          <div class="section-header compact">
+            <div>
+              <p class="section-kicker">Compartilhar</p>
+              <h2>Token do historico</h2>
+            </div>
+          </div>
+          <label class="token-label" for="historyTokenInput">Inserir token</label>
+          <textarea id="historyTokenInput" class="token-textarea" placeholder="Cole aqui o token que recebeu"></textarea>
+          <div class="token-actions">
+            <button id="importTokenBtn" class="secondary-button" type="button">Importar token</button>
+            <button id="generateTokenBtn" class="ghost-button" type="button">Gerar token</button>
+            <button id="copyTokenBtn" class="ghost-button" type="button">Copiar token</button>
+          </div>
+          <p class="token-help">Use gerar token para compartilhar seu historico manualmente com outra pessoa.</p>
+        </section>
+
         <section class="card stats-card">
           <button id="toggleStatsBtn" class="accordion-button" type="button" aria-expanded="false">
             <span>Resumo geral</span>

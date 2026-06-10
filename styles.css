@@ -132,6 +132,11 @@ select {
   margin-bottom: 24px;
 }
 
+.share-card {
+  padding: 28px;
+  margin-bottom: 24px;
+}
+
 .accordion-button {
   width: 100%;
   display: flex;
@@ -451,6 +456,36 @@ select {
   margin-top: 24px;
 }
 
+.token-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.token-textarea {
+  width: 100%;
+  min-height: 132px;
+  resize: vertical;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #cad7c5;
+  background: #fff;
+  color: var(--text);
+}
+
+.token-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.token-help {
+  margin: 14px 0 0;
+  color: var(--muted);
+}
+
 .stats-grid {
   display: grid;
   gap: 12px;
@@ -649,6 +684,7 @@ select {
   .hero,
   .live-card,
   .history-card,
+  .share-card,
   .stats-card {
     padding: 20px;
     border-radius: 24px;
@@ -770,6 +806,10 @@ select {
   .history-list,
   .stats-grid {
     gap: 10px;
+  }
+
+  .token-actions {
+    flex-direction: column;
   }
 
   .history-pagination {
