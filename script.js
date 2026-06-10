@@ -198,7 +198,7 @@ async function finishMatch() {
     await persistFinishedMatch();
   } catch (error) {
     console.error(error);
-    alert("Nao foi possivel salvar a partida no historico remoto.");
+    alert(getErrorMessage(error, "Nao foi possivel salvar a partida no historico remoto."));
   }
 }
 
@@ -555,7 +555,7 @@ async function deleteHistoryMatch(index) {
     renderActiveMatch();
   } catch (error) {
     console.error(error);
-    alert("Nao foi possivel excluir a partida do historico remoto.");
+    alert(getErrorMessage(error, "Nao foi possivel excluir a partida do historico remoto."));
     await initializeHistory();
   }
 }
@@ -715,7 +715,7 @@ async function initializeHistory() {
     });
 
     if (!response.ok) {
-      throw new Error("Nao foi possivel carregar o historico remoto.");
+      throw new Error(await readApiError(response, "Nao foi possivel carregar o historico remoto."));
     }
 
     const data = await response.json();
@@ -740,8 +740,25 @@ async function saveHistory(matches) {
   });
 
   if (!response.ok) {
-    throw new Error("Nao foi possivel salvar o historico remoto.");
+    throw new Error(await readApiError(response, "Nao foi possivel salvar o historico remoto."));
   }
+}
+
+async function readApiError(response, fallbackMessage) {
+  try {
+    const data = await response.json();
+    return [data.error, data.details].filter(Boolean).join(" ");
+  } catch {
+    return fallbackMessage;
+  }
+}
+
+function getErrorMessage(error, fallbackMessage) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallbackMessage;
 }
 
 function describeDate(isoDate) {

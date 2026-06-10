@@ -4,6 +4,14 @@ const HISTORY_PREFIX = "history/";
 
 module.exports = async function handler(req, res) {
   try {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      res.status(500).json({
+        error: "Vercel Blob nao configurado.",
+        details: "Defina BLOB_READ_WRITE_TOKEN no projeto da Vercel e conecte um Blob Store.",
+      });
+      return;
+    }
+
     if (req.method === "GET") {
       const latestHistory = await readLatestHistory();
       res.setHeader("Cache-Control", "no-store");
@@ -12,7 +20,8 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      const history = Array.isArray(req.body?.history) ? req.body.history : null;
+      const payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      const history = Array.isArray(payload?.history) ? payload.history : null;
 
       if (!history) {
         res.status(400).json({ error: "Invalid history payload." });
