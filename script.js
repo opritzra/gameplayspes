@@ -1,7 +1,5 @@
 const TEAM_HOME = "Atl\u00e9tico Itarar\u00e9";
 const TEAM_AWAY = "Kawasaki Joinville";
-const STORAGE_KEY = "sofa-simple-history";
-
 const createMatchBtn = document.getElementById("createMatchBtn");
 const homeTeamPicker = document.getElementById("homeTeamPicker");
 const addEventBtn = document.getElementById("addEventBtn");
@@ -24,6 +22,7 @@ const homeChance = document.getElementById("homeChance");
 const awayChance = document.getElementById("awayChance");
 const toggleStatsBtn = document.getElementById("toggleStatsBtn");
 const statsChevron = document.getElementById("statsChevron");
+const overallStats = document.getElementById("overallStats");
 const totalMatchesStat = document.getElementById("totalMatchesStat");
 const homeWinsStat = document.getElementById("homeWinsStat");
 const awayWinsStat = document.getElementById("awayWinsStat");
@@ -39,7 +38,7 @@ const homePenaltyScore = document.getElementById("homePenaltyScore");
 const awayPenaltyScore = document.getElementById("awayPenaltyScore");
 
 let activeMatch = null;
-let history = loadHistory();
+let history = [];
 let selectedHomeTeam = TEAM_HOME;
 let statsOpen = false;
 
@@ -73,6 +72,7 @@ renderForms();
 renderChances();
 renderOverallStats();
 renderActiveMatch();
+initializeHistory();
 
 function startMatch() {
   const homeTeam = selectedHomeTeam;
@@ -155,38 +155,43 @@ function addEvent() {
   renderActiveMatch();
 }
 
-function finishMatch() {
+async function finishMatch() {
   if (!activeMatch) return;
 
-  if (activeMatch.phase === "penalties") {
-    if (!applyPenaltyScore()) {
+  try {
+    if (activeMatch.phase === "penalties") {
+      if (!applyPenaltyScore()) {
+        return;
+      }
+
+      if (activeMatch.penalties[TEAM_HOME] === activeMatch.penalties[TEAM_AWAY]) {
+        alert("Os penaltis nao podem terminar empatados.");
+        return;
+      }
+
+      await persistFinishedMatch();
       return;
     }
 
-    if (activeMatch.penalties[TEAM_HOME] === activeMatch.penalties[TEAM_AWAY]) {
-      alert("Os penaltis nao podem terminar empatados.");
-      return;
+    if (getMatchResult(activeMatch) === "draw") {
+      if (activeMatch.phase === "regulation") {
+        activeMatch.status = "awaitingOvertime";
+        renderActiveMatch();
+        return;
+      }
+
+      if (activeMatch.phase === "overtime") {
+        activeMatch.status = "awaitingPenalties";
+        renderActiveMatch();
+        return;
+      }
     }
 
-    persistFinishedMatch();
-    return;
+    await persistFinishedMatch();
+  } catch (error) {
+    console.error(error);
+    alert("Nao foi possivel salvar a partida no historico remoto.");
   }
-
-  if (getMatchResult(activeMatch) === "draw") {
-    if (activeMatch.phase === "regulation") {
-      activeMatch.status = "awaitingOvertime";
-      renderActiveMatch();
-      return;
-    }
-
-    if (activeMatch.phase === "overtime") {
-      activeMatch.status = "awaitingPenalties";
-      renderActiveMatch();
-      return;
-    }
-  }
-
-  persistFinishedMatch();
 }
 
 function continueMatch() {
@@ -210,7 +215,7 @@ function continueMatch() {
   }
 }
 
-function persistFinishedMatch() {
+async function persistFinishedMatch() {
   const finishedMatch = {
     ...activeMatch,
     endedAt: new Date().toISOString(),
@@ -218,8 +223,7 @@ function persistFinishedMatch() {
   };
 
   history.unshift(finishedMatch);
-  history = history.slice(0, 5);
-  saveHistory(history);
+  await saveHistory(history);
 
   activeMatch = null;
   renderActiveMatch();
@@ -303,14 +307,16 @@ function renderActiveMatch() {
 }
 
 function renderHistory() {
-  if (history.length === 0) {
+  const recentHistory = getRecentHistory();
+
+  if (recentHistory.length === 0) {
     historyList.className = "history-list empty-state";
     historyList.innerHTML = "<li>Nenhuma partida finalizada ainda.</li>";
     return;
   }
 
   historyList.className = "history-list";
-  historyList.innerHTML = history
+  historyList.innerHTML = recentHistory
     .map((match) => {
       const homeGoals = match.score[match.homeTeam];
       const awayGoals = match.score[match.awayTeam];
@@ -333,8 +339,9 @@ function renderHistory() {
 
 function renderForms() {
   const displayedTeams = getDisplayedTeams();
-  const homeRecent = history.map((match) => getTeamOutcome(match, displayedTeams.homeTeam));
-  const awayRecent = history.map((match) => getTeamOutcome(match, displayedTeams.awayTeam));
+  const recentHistory = getRecentHistory();
+  const homeRecent = recentHistory.map((match) => getTeamOutcome(match, displayedTeams.homeTeam));
+  const awayRecent = recentHistory.map((match) => getTeamOutcome(match, displayedTeams.awayTeam));
 
   homeForm.innerHTML = formatFormTrack(homeRecent);
   awayForm.innerHTML = formatFormTrack(awayRecent);
@@ -399,7 +406,9 @@ function resultClass(result) {
 }
 
 function calculateWinChances() {
-  if (history.length === 0) {
+  const recentHistory = getRecentHistory();
+
+  if (recentHistory.length === 0) {
     return {
       [TEAM_HOME]: 50,
       [TEAM_AWAY]: 50,
@@ -409,7 +418,7 @@ function calculateWinChances() {
   let homeStrength = 0;
   let awayStrength = 0;
 
-  for (const match of history) {
+  for (const match of recentHistory) {
     homeStrength += getMatchStrength(match, TEAM_HOME);
     awayStrength += getMatchStrength(match, TEAM_AWAY);
   }
@@ -617,17 +626,44 @@ function syncCrest(element, team) {
   element.alt = crestMap[team].alt;
 }
 
-function loadHistory() {
+function getRecentHistory() {
+  return history.slice(0, 5);
+}
+
+async function initializeHistory() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
+    const response = await fetch("/api/history", {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error("Nao foi possivel carregar o historico remoto.");
+    }
+
+    const data = await response.json();
+    history = Array.isArray(data.history) ? data.history : [];
+    renderHistory();
+    renderForms();
+    renderChances();
+    renderOverallStats();
+    renderActiveMatch();
+  } catch (error) {
+    console.error(error);
   }
 }
 
-function saveHistory(matches) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(matches));
+async function saveHistory(matches) {
+  const response = await fetch("/api/history", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ history: matches }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Nao foi possivel salvar o historico remoto.");
+  }
 }
 
 function describeDate(isoDate) {
