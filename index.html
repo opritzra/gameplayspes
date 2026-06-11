@@ -97,7 +97,8 @@
 
             <label>
               Jogador
-              <input id="playerName" type="text" placeholder="Nome do jogador">
+              <input id="playerName" type="text" placeholder="Nome do jogador" list="playerSuggestions" autocomplete="off">
+              <datalist id="playerSuggestions"></datalist>
             </label>
 
             <label>
@@ -143,14 +144,12 @@
               <h2>Token do historico</h2>
             </div>
           </div>
-          <label class="token-label" for="historyTokenInput">Inserir token</label>
-          <textarea id="historyTokenInput" class="token-textarea" placeholder="Cole aqui o token que recebeu"></textarea>
           <div class="token-actions">
-            <button id="importTokenBtn" class="secondary-button" type="button">Importar token</button>
-            <button id="generateTokenBtn" class="ghost-button" type="button">Gerar token</button>
-            <button id="copyTokenBtn" class="ghost-button" type="button">Copiar token</button>
+            <button id="downloadTokenBtn" class="secondary-button" type="button">Baixar token</button>
+            <label class="ghost-button upload-token-button" for="uploadTokenInput">Subir token</label>
+            <input id="uploadTokenInput" type="file" accept=".txt,.token,text/plain" class="hidden">
           </div>
-          <p class="token-help">Use gerar token para compartilhar seu historico manualmente com outra pessoa.</p>
+          <p class="token-help">O arquivo de token salva todo o historico, incluindo partidas, eventos, gols, cartoes e nomes dos jogadores.</p>
         </section>
 
         <section class="card stats-card">
@@ -167,13 +166,31 @@
               <span class="stat-label">Atletico Itarare</span>
               <strong id="homeWinsStat" class="stat-value">0</strong>
               <span id="homeRateStat" class="stat-meta">Taxa de vitoria: 0%</span>
+              <span id="homeGoalsStat" class="stat-meta">Gols marcados: 0</span>
             </article>
             <article class="stat-box">
               <span class="stat-label">Kawasaki Joinville</span>
               <strong id="awayWinsStat" class="stat-value">0</strong>
               <span id="awayRateStat" class="stat-meta">Taxa de vitoria: 0%</span>
+              <span id="awayGoalsStat" class="stat-meta">Gols marcados: 0</span>
             </article>
           </div>
+        </section>
+
+        <section class="card stats-card">
+          <button id="toggleScorersBtn" class="accordion-button" type="button" aria-expanded="false">
+            <span>Ver artilheiros</span>
+            <span id="scorersChevron" class="accordion-chevron">+</span>
+          </button>
+          <div id="topScorersList" class="ranking-list hidden"></div>
+        </section>
+
+        <section class="card stats-card">
+          <button id="toggleCardsBtn" class="accordion-button" type="button" aria-expanded="false">
+            <span>Jogadores com mais cartoes</span>
+            <span id="cardsChevron" class="accordion-chevron">+</span>
+          </button>
+          <div id="topCardsList" class="ranking-list hidden"></div>
         </section>
 
         <section class="card history-card">

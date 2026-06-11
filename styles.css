@@ -456,29 +456,18 @@ select {
   margin-top: 24px;
 }
 
-.token-label {
-  display: block;
-  margin-bottom: 10px;
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.token-textarea {
-  width: 100%;
-  min-height: 132px;
-  resize: vertical;
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid #cad7c5;
-  background: #fff;
-  color: var(--text);
-}
-
 .token-actions {
   display: flex;
   gap: 10px;
   margin-top: 14px;
   flex-wrap: wrap;
+}
+
+.upload-token-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .token-help {
@@ -515,6 +504,52 @@ select {
 .stat-meta {
   color: var(--accent-strong);
   font-weight: 700;
+}
+
+.ranking-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.ranking-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+}
+
+.ranking-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ranking-crest {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.ranking-name {
+  font-weight: 700;
+}
+
+.ranking-meta {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.ranking-value {
+  color: var(--accent-strong);
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .events-list,

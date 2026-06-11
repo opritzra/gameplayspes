@@ -24,23 +24,30 @@ const homeForm = document.getElementById("homeForm");
 const awayForm = document.getElementById("awayForm");
 const homeChance = document.getElementById("homeChance");
 const awayChance = document.getElementById("awayChance");
-const historyTokenInput = document.getElementById("historyTokenInput");
-const importTokenBtn = document.getElementById("importTokenBtn");
-const generateTokenBtn = document.getElementById("generateTokenBtn");
-const copyTokenBtn = document.getElementById("copyTokenBtn");
+const downloadTokenBtn = document.getElementById("downloadTokenBtn");
+const uploadTokenInput = document.getElementById("uploadTokenInput");
 const toggleStatsBtn = document.getElementById("toggleStatsBtn");
+const toggleScorersBtn = document.getElementById("toggleScorersBtn");
+const toggleCardsBtn = document.getElementById("toggleCardsBtn");
 const statsChevron = document.getElementById("statsChevron");
+const scorersChevron = document.getElementById("scorersChevron");
+const cardsChevron = document.getElementById("cardsChevron");
 const overallStats = document.getElementById("overallStats");
+const topScorersList = document.getElementById("topScorersList");
+const topCardsList = document.getElementById("topCardsList");
 const totalMatchesStat = document.getElementById("totalMatchesStat");
 const homeWinsStat = document.getElementById("homeWinsStat");
 const awayWinsStat = document.getElementById("awayWinsStat");
 const homeRateStat = document.getElementById("homeRateStat");
 const awayRateStat = document.getElementById("awayRateStat");
+const homeGoalsStat = document.getElementById("homeGoalsStat");
+const awayGoalsStat = document.getElementById("awayGoalsStat");
 const penaltyControls = document.getElementById("penaltyControls");
 
 const teamSelect = document.getElementById("teamSelect");
 const eventType = document.getElementById("eventType");
 const playerName = document.getElementById("playerName");
+const playerSuggestions = document.getElementById("playerSuggestions");
 const eventMinute = document.getElementById("eventMinute");
 const homePenaltyScore = document.getElementById("homePenaltyScore");
 const awayPenaltyScore = document.getElementById("awayPenaltyScore");
@@ -50,6 +57,8 @@ let activeMatch = null;
 let history = loadHistory();
 let selectedHomeTeam = TEAM_HOME;
 let statsOpen = false;
+let scorersOpen = false;
+let cardsOpen = false;
 let historyPage = 1;
 const HISTORY_PAGE_SIZE = 5;
 
@@ -71,24 +80,63 @@ const crestMap = {
   },
 };
 
+const teamCodeMap = {
+  [TEAM_HOME]: "A",
+  [TEAM_AWAY]: "K",
+};
+
+const teamFromCodeMap = {
+  A: TEAM_HOME,
+  K: TEAM_AWAY,
+};
+
+const eventTypeCodeMap = {
+  goal: "g",
+  yellow: "y",
+  red: "r",
+  missedPenalty: "p",
+};
+
+const eventTypeFromCodeMap = {
+  g: "goal",
+  y: "yellow",
+  r: "red",
+  p: "missedPenalty",
+};
+
+const phaseCodeMap = {
+  regulation: "r",
+  overtime: "o",
+  penalties: "p",
+};
+
+const phaseFromCodeMap = {
+  r: "regulation",
+  o: "overtime",
+  p: "penalties",
+};
+
 createMatchBtn.addEventListener("click", startMatch);
 homeTeamPicker.addEventListener("change", handleHomeTeamChange);
 addEventBtn.addEventListener("click", addEvent);
 continueMatchBtn.addEventListener("click", continueMatch);
 finishMatchBtn.addEventListener("click", finishMatch);
 toggleStatsBtn.addEventListener("click", toggleStats);
+toggleScorersBtn.addEventListener("click", toggleScorers);
+toggleCardsBtn.addEventListener("click", toggleCards);
 prevHistoryBtn.addEventListener("click", () => changeHistoryPage(-1));
 nextHistoryBtn.addEventListener("click", () => changeHistoryPage(1));
-importTokenBtn.addEventListener("click", importHistoryToken);
-generateTokenBtn.addEventListener("click", generateHistoryToken);
-copyTokenBtn.addEventListener("click", copyHistoryToken);
+downloadTokenBtn.addEventListener("click", downloadHistoryToken);
+uploadTokenInput.addEventListener("change", importHistoryTokenFromFile);
 
 renderHistory();
 renderForms();
 renderChances();
 renderOverallStats();
+renderTopScorers();
+renderTopCards();
+renderPlayerSuggestions();
 renderActiveMatch();
-generateHistoryToken();
 
 function startMatch() {
   const homeTeam = selectedHomeTeam;
@@ -248,7 +296,9 @@ async function persistFinishedMatch() {
   renderForms();
   renderChances();
   renderOverallStats();
-  generateHistoryToken();
+  renderTopScorers();
+  renderTopCards();
+  renderPlayerSuggestions();
 }
 
 function getMatchResult(match) {
@@ -290,7 +340,7 @@ function renderActiveMatch() {
   matchStatus.className = "status-badge live";
   homeScore.textContent = formatScoreDisplay(activeMatch, displayedTeams.homeTeam);
   awayScore.textContent = formatScoreDisplay(activeMatch, displayedTeams.awayTeam);
-  currentMinute.textContent = formatMinute(getCurrentMinute(activeMatch));
+  currentMinute.textContent = formatMinute(getCurrentMinute(activeMatch), activeMatch.phase);
   updateEventTypeOptions();
   syncMinuteRange(activeMatch.phase);
   togglePenaltyMode(activeMatch.phase === "penalties");
@@ -313,7 +363,7 @@ function renderActiveMatch() {
         <li class="event-item">
           <div class="event-top">
             <span class="event-badge ${event.type}">${eventLabels[event.type]}</span>
-            <span class="minute-chip">${formatMinute(event.minute)}</span>
+            <span class="minute-chip">${formatMinute(event.minute, event.phase)}</span>
           </div>
           <div class="event-body">
             <strong>${event.team}</strong> - ${event.player} (${getPhaseLabel(event.phase)})
@@ -394,12 +444,16 @@ function renderOverallStats() {
   const totalMatches = history.length;
   const homeWins = history.filter((match) => match.result === TEAM_HOME).length;
   const awayWins = history.filter((match) => match.result === TEAM_AWAY).length;
+  const homeGoals = history.reduce((sum, match) => sum + (match.score?.[TEAM_HOME] || 0), 0);
+  const awayGoals = history.reduce((sum, match) => sum + (match.score?.[TEAM_AWAY] || 0), 0);
 
   totalMatchesStat.textContent = String(totalMatches);
   homeWinsStat.textContent = String(homeWins);
   awayWinsStat.textContent = String(awayWins);
   homeRateStat.textContent = `Taxa de vitoria: ${calculateRate(homeWins, totalMatches)}%`;
   awayRateStat.textContent = `Taxa de vitoria: ${calculateRate(awayWins, totalMatches)}%`;
+  homeGoalsStat.textContent = `Gols marcados: ${homeGoals}`;
+  awayGoalsStat.textContent = `Gols marcados: ${awayGoals}`;
 }
 
 function toggleStats() {
@@ -407,6 +461,20 @@ function toggleStats() {
   overallStats.classList.toggle("hidden", !statsOpen);
   toggleStatsBtn.setAttribute("aria-expanded", String(statsOpen));
   statsChevron.textContent = statsOpen ? "-" : "+";
+}
+
+function toggleScorers() {
+  scorersOpen = !scorersOpen;
+  topScorersList.classList.toggle("hidden", !scorersOpen);
+  toggleScorersBtn.setAttribute("aria-expanded", String(scorersOpen));
+  scorersChevron.textContent = scorersOpen ? "-" : "+";
+}
+
+function toggleCards() {
+  cardsOpen = !cardsOpen;
+  topCardsList.classList.toggle("hidden", !cardsOpen);
+  toggleCardsBtn.setAttribute("aria-expanded", String(cardsOpen));
+  cardsChevron.textContent = cardsOpen ? "-" : "+";
 }
 
 function getTeamOutcome(match, team) {
@@ -518,6 +586,89 @@ function calculateRate(wins, total) {
   return Math.round((wins / total) * 100);
 }
 
+function renderTopScorers() {
+  const scorers = buildScorersRanking();
+  if (scorers.length === 0) {
+    topScorersList.innerHTML = `<div class="ranking-item"><span class="ranking-meta">Nenhum gol registrado ainda.</span></div>`;
+    return;
+  }
+
+  topScorersList.innerHTML = scorers
+    .map((player, index) => `
+      <div class="ranking-item">
+        <div class="ranking-main">
+          <img class="ranking-crest" src="${crestMap[player.team].src}" alt="${crestMap[player.team].alt}">
+          <div>
+            <div class="ranking-name">${index + 1}. ${player.name}</div>
+            <div class="ranking-meta">${player.team}</div>
+          </div>
+        </div>
+        <div class="ranking-value">${player.goals} gols</div>
+      </div>
+    `)
+    .join("");
+}
+
+function renderTopCards() {
+  const players = buildCardsRanking();
+  if (players.length === 0) {
+    topCardsList.innerHTML = `<div class="ranking-item"><span class="ranking-meta">Nenhum cartao registrado ainda.</span></div>`;
+    return;
+  }
+
+  topCardsList.innerHTML = players
+    .map((player, index) => `
+      <div class="ranking-item">
+        <div class="ranking-main">
+          <img class="ranking-crest" src="${crestMap[player.team].src}" alt="${crestMap[player.team].alt}">
+          <div>
+            <div class="ranking-name">${index + 1}. ${player.name}</div>
+            <div class="ranking-meta">${player.team}</div>
+          </div>
+        </div>
+        <div class="ranking-value">${player.total} cartoes</div>
+      </div>
+    `)
+    .join("");
+}
+
+function buildScorersRanking() {
+  const scorers = new Map();
+
+  history.forEach((match) => {
+    (match.events || []).forEach((event) => {
+      if (event.type !== "goal") return;
+      const key = `${event.player}::${event.team}`;
+      const current = scorers.get(key) || { name: event.player, team: event.team, goals: 0 };
+      current.goals += 1;
+      scorers.set(key, current);
+    });
+  });
+
+  return [...scorers.values()]
+    .sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name))
+    .slice(0, 10);
+}
+
+function buildCardsRanking() {
+  const cards = new Map();
+
+  history.forEach((match) => {
+    (match.events || []).forEach((event) => {
+      if (event.type !== "yellow" && event.type !== "red") return;
+      const key = `${event.player}::${event.team}`;
+      const current = cards.get(key) || { name: event.player, team: event.team, total: 0, red: 0 };
+      current.total += 1;
+      if (event.type === "red") current.red += 1;
+      cards.set(key, current);
+    });
+  });
+
+  return [...cards.values()]
+    .sort((a, b) => b.total - a.total || b.red - a.red || a.name.localeCompare(b.name))
+    .slice(0, 10);
+}
+
 function getHistoryTotalPages() {
   return Math.max(1, Math.ceil(history.length / HISTORY_PAGE_SIZE));
 }
@@ -561,8 +712,10 @@ async function deleteHistoryMatch(index) {
     renderForms();
     renderChances();
     renderOverallStats();
+    renderTopScorers();
+    renderTopCards();
+    renderPlayerSuggestions();
     renderActiveMatch();
-    generateHistoryToken();
   } catch (error) {
     console.error(error);
     alert(getErrorMessage(error, "Nao foi possivel excluir a partida do historico local."));
@@ -578,6 +731,11 @@ function formatMinute(minute) {
   if (minute === "00") return "00'";
 
   const numericMinute = Number(minute);
+  const phase = arguments[1] || "regulation";
+  if (phase === "overtime") {
+    return `${numericMinute}'`;
+  }
+
   if (numericMinute > 90) {
     return `90+${numericMinute - 90}'`;
   }
@@ -623,7 +781,7 @@ function updateEventTypeOptions() {
 
 function getMinuteRange(phase) {
   if (phase === "overtime") {
-    return { min: 106, max: 120 };
+    return { min: 91, max: 120 };
   }
 
   if (phase === "penalties") {
@@ -733,11 +891,10 @@ function saveHistory(matches) {
 function generateHistoryToken() {
   try {
     const payload = {
-      version: 1,
-      history,
+      version: 2,
+      history: compactHistory(history),
     };
-    historyTokenInput.value = encodeToken(payload);
-    return historyTokenInput.value;
+    return encodeToken(payload);
   } catch (error) {
     console.error(error);
     alert("Nao foi possivel gerar o token do historico.");
@@ -745,46 +902,62 @@ function generateHistoryToken() {
   }
 }
 
-function importHistoryToken() {
-  const token = historyTokenInput.value.trim();
-
-  if (!token) {
-    alert("Cole um token antes de importar.");
+async function importHistoryTokenFromFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) {
     return;
   }
 
   try {
+    const token = (await file.text()).trim();
+    if (!token) {
+      throw new Error("Arquivo de token vazio.");
+    }
+
     const payload = decodeToken(token);
-    if (!Array.isArray(payload?.history)) {
+    if (!payload) {
       throw new Error("Token invalido.");
     }
 
-    history = payload.history;
+    history = expandHistoryPayload(payload);
     historyPage = 1;
     saveHistory(history);
     renderHistory();
     renderForms();
     renderChances();
     renderOverallStats();
+    renderTopScorers();
+    renderTopCards();
+    renderPlayerSuggestions();
     renderActiveMatch();
-    generateHistoryToken();
     alert("Historico importado com sucesso.");
   } catch (error) {
     console.error(error);
     alert(getErrorMessage(error, "Nao foi possivel importar o token."));
+  } finally {
+    uploadTokenInput.value = "";
   }
 }
 
-async function copyHistoryToken() {
-  const token = historyTokenInput.value.trim() || generateHistoryToken();
-  if (!token) return;
-
+function downloadHistoryToken() {
   try {
-    await navigator.clipboard.writeText(token);
-    alert("Token copiado.");
+    const token = generateHistoryToken();
+    if (!token) return;
+
+    const blob = new Blob([token], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+
+    link.href = url;
+    link.download = `historico-${stamp}.token.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   } catch (error) {
     console.error(error);
-    alert("Nao foi possivel copiar. Copie manualmente pelo campo.");
+    alert("Nao foi possivel baixar o token.");
   }
 }
 
@@ -798,12 +971,123 @@ function decodeToken(token) {
   return JSON.parse(json);
 }
 
+function compactHistory(matches) {
+  return matches.map((match) => {
+    return [
+      teamCodeMap[match.homeTeam],
+      teamCodeMap[match.awayTeam],
+      match.score[TEAM_HOME],
+      match.score[TEAM_AWAY],
+      match.penalties?.[TEAM_HOME] || 0,
+      match.penalties?.[TEAM_AWAY] || 0,
+      phaseCodeMap[match.phase] || "r",
+      match.startedAt || "",
+      match.endedAt || "",
+      Array.isArray(match.events)
+        ? match.events.map((event) => [
+            teamCodeMap[event.team],
+            eventTypeCodeMap[event.type] || "g",
+            event.player,
+            event.minute,
+            phaseCodeMap[event.phase] || "r",
+          ])
+        : [],
+    ];
+  });
+}
+
+function expandHistoryPayload(payload) {
+  if (payload.version === 2) {
+    if (!Array.isArray(payload.history)) {
+      throw new Error("Token invalido.");
+    }
+
+    return payload.history.map((match) => {
+      const [
+        homeCode,
+        awayCode,
+        atleticoScore,
+        kawasakiScore,
+        atleticoPenalties,
+        kawasakiPenalties,
+        phaseCode,
+        startedAt,
+        endedAt,
+        compactEvents,
+      ] = match;
+
+      const expandedMatch = {
+        homeTeam: teamFromCodeMap[homeCode],
+        awayTeam: teamFromCodeMap[awayCode],
+        score: {
+          [TEAM_HOME]: Number(atleticoScore) || 0,
+          [TEAM_AWAY]: Number(kawasakiScore) || 0,
+        },
+        penalties: {
+          [TEAM_HOME]: Number(atleticoPenalties) || 0,
+          [TEAM_AWAY]: Number(kawasakiPenalties) || 0,
+        },
+        phase: phaseFromCodeMap[phaseCode] || "regulation",
+        startedAt: startedAt || "",
+        endedAt: endedAt || "",
+        events: Array.isArray(compactEvents)
+          ? compactEvents.map((event) => ({
+              team: teamFromCodeMap[event[0]],
+              type: eventTypeFromCodeMap[event[1]] || "goal",
+              player: event[2],
+              minute: Number(event[3]) || 0,
+              phase: phaseFromCodeMap[event[4]] || "regulation",
+            }))
+          : [],
+      };
+
+      expandedMatch.result = getMatchResult(expandedMatch);
+      return expandedMatch;
+    });
+  }
+
+  if (payload.version === 1 && Array.isArray(payload.history)) {
+    return payload.history;
+  }
+
+  throw new Error("Token invalido.");
+}
+
 function getErrorMessage(error, fallbackMessage) {
   if (error instanceof Error && error.message) {
     return error.message;
   }
 
   return fallbackMessage;
+}
+
+function renderPlayerSuggestions() {
+  const names = collectKnownPlayers();
+  playerSuggestions.innerHTML = names
+    .map((name) => `<option value="${escapeHtml(name)}"></option>`)
+    .join("");
+}
+
+function collectKnownPlayers() {
+  const names = new Set();
+
+  history.forEach((match) => {
+    (match.events || []).forEach((event) => {
+      if (event.player) {
+        names.add(event.player);
+      }
+    });
+  });
+
+  return [...names].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 function describeDate(isoDate) {
