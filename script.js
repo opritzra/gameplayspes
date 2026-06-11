@@ -25,6 +25,7 @@ const awayForm = document.getElementById("awayForm");
 const homeChance = document.getElementById("homeChance");
 const awayChance = document.getElementById("awayChance");
 const downloadTokenBtn = document.getElementById("downloadTokenBtn");
+const uploadTokenBtn = document.getElementById("uploadTokenBtn");
 const uploadTokenInput = document.getElementById("uploadTokenInput");
 const toggleStatsBtn = document.getElementById("toggleStatsBtn");
 const toggleScorersBtn = document.getElementById("toggleScorersBtn");
@@ -127,6 +128,7 @@ toggleCardsBtn.addEventListener("click", toggleCards);
 prevHistoryBtn.addEventListener("click", () => changeHistoryPage(-1));
 nextHistoryBtn.addEventListener("click", () => changeHistoryPage(1));
 downloadTokenBtn.addEventListener("click", downloadHistoryToken);
+uploadTokenBtn.addEventListener("click", () => uploadTokenInput.click());
 uploadTokenInput.addEventListener("change", importHistoryTokenFromFile);
 
 renderHistory();
