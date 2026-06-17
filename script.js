@@ -679,7 +679,7 @@ function buildScorersRanking() {
       return;
     }
 
-    if (Number(goals) < 0) {
+    if (Number(goals) <= 0) {
       scorers.delete(key);
       return;
     }
@@ -1159,9 +1159,21 @@ function normalizeHistoryPlayers(matches) {
   }));
 }
 
+function getHiddenPlayerNames() {
+  const hidden = new Set();
+
+  Object.entries(scorerOverrides).forEach(([key, goals]) => {
+    if (Number(goals) <= 0) {
+      hidden.add(String(key).split("::")[0]);
+    }
+  });
+
+  return hidden;
+}
+
 function editScorerGoals(name, team, currentGoals) {
   const value = window.prompt(
-    `Editar gols de ${name} (${team}).\nUse um numero menor que 0 para remover da artilharia.`,
+    `Editar gols de ${name} (${team}).\nUse 0 ou menos para remover da artilharia e das sugestoes.`,
     String(currentGoals)
   );
 
@@ -1178,6 +1190,7 @@ function editScorerGoals(name, team, currentGoals) {
   scorerOverrides[getScorerOverrideKey(name, team)] = parsedGoals;
   saveAppState();
   renderTopScorers();
+  renderPlayerSuggestions();
 }
 
 function getErrorMessage(error, fallbackMessage) {
@@ -1194,10 +1207,11 @@ function renderPlayerSuggestions() {
 
 function collectKnownPlayers() {
   const names = new Map();
+  const hiddenPlayers = getHiddenPlayerNames();
 
   history.forEach((match) => {
     (match.events || []).forEach((event) => {
-      if (event.player) {
+      if (event.player && !hiddenPlayers.has(normalizePlayerName(event.player))) {
         upsertKnownPlayer(names, event.player);
       }
     });
@@ -1205,7 +1219,7 @@ function collectKnownPlayers() {
 
   if (activeMatch) {
     (activeMatch.events || []).forEach((event) => {
-      if (event.player) {
+      if (event.player && !hiddenPlayers.has(normalizePlayerName(event.player))) {
         upsertKnownPlayer(names, event.player);
       }
     });
