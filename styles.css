@@ -578,6 +578,23 @@ select {
   font-weight: 700;
 }
 
+.ranking-name-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ranking-name-button:hover .ranking-name,
+.ranking-name-button:focus-visible .ranking-name {
+  text-decoration: underline;
+}
+
 .ranking-meta {
   color: var(--muted);
   font-size: 0.92rem;

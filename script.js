@@ -55,7 +55,9 @@ const awayPenaltyScore = document.getElementById("awayPenaltyScore");
 const STORAGE_KEY = "elgamepreidepes-history";
 
 let activeMatch = null;
-let history = loadHistory();
+const persistedState = loadAppState();
+let history = persistedState.history;
+let scorerOverrides = persistedState.scorerOverrides;
 let selectedHomeTeam = TEAM_HOME;
 let statsOpen = false;
 let scorersOpen = false;
@@ -295,7 +297,7 @@ async function persistFinishedMatch() {
 
   history.unshift(finishedMatch);
   historyPage = 1;
-  saveHistory(history);
+  saveAppState();
 
   activeMatch = null;
   renderActiveMatch();
@@ -606,7 +608,15 @@ function renderTopScorers() {
         <div class="ranking-main">
           <img class="ranking-crest" src="${crestMap[player.team].src}" alt="${crestMap[player.team].alt}">
           <div>
-            <div class="ranking-name">${index + 1}. ${player.name}</div>
+            <button
+              class="ranking-name-button"
+              type="button"
+              data-player-name="${escapeHtml(player.name)}"
+              data-player-team="${escapeHtml(player.team)}"
+              data-player-goals="${player.goals}"
+            >
+              <span class="ranking-name">${index + 1}. ${player.name}</span>
+            </button>
             <div class="ranking-meta">${player.team}</div>
           </div>
         </div>
@@ -614,6 +624,16 @@ function renderTopScorers() {
       </div>
     `)
     .join("");
+
+  topScorersList.querySelectorAll(".ranking-name-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      editScorerGoals(
+        button.dataset.playerName || "",
+        button.dataset.playerTeam || "",
+        Number(button.dataset.playerGoals) || 0
+      );
+    });
+  });
 }
 
 function renderTopCards() {
@@ -651,6 +671,21 @@ function buildScorersRanking() {
       current.goals += 1;
       scorers.set(key, current);
     });
+  });
+
+  Object.entries(scorerOverrides).forEach(([key, goals]) => {
+    const current = scorers.get(key);
+    if (!current) {
+      return;
+    }
+
+    if (Number(goals) < 0) {
+      scorers.delete(key);
+      return;
+    }
+
+    current.goals = Number(goals) || 0;
+    scorers.set(key, current);
   });
 
   return [...scorers.values()]
@@ -716,7 +751,7 @@ async function deleteHistoryMatch(index) {
       historyPage = totalPages;
     }
 
-    saveHistory(history);
+    saveAppState();
     renderHistory();
     renderForms();
     renderChances();
@@ -884,24 +919,46 @@ function getRecentHistory() {
   return history.slice(0, HISTORY_PAGE_SIZE);
 }
 
-function loadHistory() {
+function loadAppState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) {
+      return { history: [], scorerOverrides: {} };
+    }
+
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return { history: parsed, scorerOverrides: {} };
+    }
+
+    return {
+      history: Array.isArray(parsed.history) ? parsed.history : [],
+      scorerOverrides:
+        parsed.scorerOverrides && typeof parsed.scorerOverrides === "object"
+          ? parsed.scorerOverrides
+          : {},
+    };
   } catch {
-    return [];
+    return { history: [], scorerOverrides: {} };
   }
 }
 
-function saveHistory(matches) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(matches));
+function saveAppState() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      history,
+      scorerOverrides,
+    })
+  );
 }
 
 function generateHistoryToken() {
   try {
     const payload = {
-      version: 2,
+      version: 3,
       history: compactHistory(history),
+      scorerOverrides,
     };
     return encodeToken(payload);
   } catch (error) {
@@ -928,9 +985,11 @@ async function importHistoryTokenFromFile(event) {
       throw new Error("Token invalido.");
     }
 
-    history = expandHistoryPayload(payload);
+    const importedState = expandHistoryPayload(payload);
+    history = importedState.history;
+    scorerOverrides = importedState.scorerOverrides;
     historyPage = 1;
-    saveHistory(history);
+    saveAppState();
     renderHistory();
     renderForms();
     renderChances();
@@ -1005,61 +1064,108 @@ function compactHistory(matches) {
   });
 }
 
+function expandCompactMatch(match) {
+  const [
+    homeCode,
+    awayCode,
+    atleticoScore,
+    kawasakiScore,
+    atleticoPenalties,
+    kawasakiPenalties,
+    phaseCode,
+    startedAt,
+    endedAt,
+    compactEvents,
+  ] = match;
+
+  const expandedMatch = {
+    homeTeam: teamFromCodeMap[homeCode],
+    awayTeam: teamFromCodeMap[awayCode],
+    score: {
+      [TEAM_HOME]: Number(atleticoScore) || 0,
+      [TEAM_AWAY]: Number(kawasakiScore) || 0,
+    },
+    penalties: {
+      [TEAM_HOME]: Number(atleticoPenalties) || 0,
+      [TEAM_AWAY]: Number(kawasakiPenalties) || 0,
+    },
+    phase: phaseFromCodeMap[phaseCode] || "regulation",
+    startedAt: startedAt || "",
+    endedAt: endedAt || "",
+    events: Array.isArray(compactEvents)
+      ? compactEvents.map((event) => ({
+          team: teamFromCodeMap[event[0]],
+          type: eventTypeFromCodeMap[event[1]] || "goal",
+          player: event[2],
+          minute: Number(event[3]) || 0,
+          phase: phaseFromCodeMap[event[4]] || "regulation",
+        }))
+      : [],
+  };
+
+  expandedMatch.result = getMatchResult(expandedMatch);
+  return expandedMatch;
+}
+
 function expandHistoryPayload(payload) {
+  if (payload.version === 3) {
+    if (!Array.isArray(payload.history)) {
+      throw new Error("Token invalido.");
+    }
+
+    return {
+      history: payload.history.map(expandCompactMatch),
+      scorerOverrides:
+        payload.scorerOverrides && typeof payload.scorerOverrides === "object"
+          ? payload.scorerOverrides
+          : {},
+    };
+  }
+
   if (payload.version === 2) {
     if (!Array.isArray(payload.history)) {
       throw new Error("Token invalido.");
     }
 
-    return payload.history.map((match) => {
-      const [
-        homeCode,
-        awayCode,
-        atleticoScore,
-        kawasakiScore,
-        atleticoPenalties,
-        kawasakiPenalties,
-        phaseCode,
-        startedAt,
-        endedAt,
-        compactEvents,
-      ] = match;
-
-      const expandedMatch = {
-        homeTeam: teamFromCodeMap[homeCode],
-        awayTeam: teamFromCodeMap[awayCode],
-        score: {
-          [TEAM_HOME]: Number(atleticoScore) || 0,
-          [TEAM_AWAY]: Number(kawasakiScore) || 0,
-        },
-        penalties: {
-          [TEAM_HOME]: Number(atleticoPenalties) || 0,
-          [TEAM_AWAY]: Number(kawasakiPenalties) || 0,
-        },
-        phase: phaseFromCodeMap[phaseCode] || "regulation",
-        startedAt: startedAt || "",
-        endedAt: endedAt || "",
-        events: Array.isArray(compactEvents)
-          ? compactEvents.map((event) => ({
-              team: teamFromCodeMap[event[0]],
-              type: eventTypeFromCodeMap[event[1]] || "goal",
-              player: event[2],
-              minute: Number(event[3]) || 0,
-              phase: phaseFromCodeMap[event[4]] || "regulation",
-            }))
-          : [],
-      };
-
-      expandedMatch.result = getMatchResult(expandedMatch);
-      return expandedMatch;
-    });
+    return {
+      history: payload.history.map(expandCompactMatch),
+      scorerOverrides: {},
+    };
   }
 
   if (payload.version === 1 && Array.isArray(payload.history)) {
-    return payload.history;
+    return {
+      history: payload.history,
+      scorerOverrides: {},
+    };
   }
 
   throw new Error("Token invalido.");
+}
+
+function getScorerOverrideKey(name, team) {
+  return `${normalizePlayerName(name)}::${team}`;
+}
+
+function editScorerGoals(name, team, currentGoals) {
+  const value = window.prompt(
+    `Editar gols de ${name} (${team}).\nUse um numero menor que 0 para remover da artilharia.`,
+    String(currentGoals)
+  );
+
+  if (value === null) {
+    return;
+  }
+
+  const parsedGoals = Number(value.trim());
+  if (!Number.isFinite(parsedGoals) || !Number.isInteger(parsedGoals)) {
+    alert("Digite um numero inteiro valido.");
+    return;
+  }
+
+  scorerOverrides[getScorerOverrideKey(name, team)] = parsedGoals;
+  saveAppState();
+  renderTopScorers();
 }
 
 function getErrorMessage(error, fallbackMessage) {
