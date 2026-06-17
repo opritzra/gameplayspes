@@ -375,7 +375,7 @@ function renderActiveMatch() {
             <span class="minute-chip">${formatMinute(event.minute, event.phase)}</span>
           </div>
           <div class="event-body">
-            <strong>${event.team}</strong> - ${event.player} (${getPhaseLabel(event.phase)})
+            <strong>${event.team}</strong> - ${formatPlayerName(event.player)} (${getPhaseLabel(event.phase)})
           </div>
         </li>
       `;
@@ -928,11 +928,11 @@ function loadAppState() {
 
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return { history: parsed, scorerOverrides: {} };
+      return { history: normalizeHistoryPlayers(parsed), scorerOverrides: {} };
     }
 
     return {
-      history: Array.isArray(parsed.history) ? parsed.history : [],
+      history: normalizeHistoryPlayers(Array.isArray(parsed.history) ? parsed.history : []),
       scorerOverrides:
         parsed.scorerOverrides && typeof parsed.scorerOverrides === "object"
           ? parsed.scorerOverrides
@@ -1096,7 +1096,7 @@ function expandCompactMatch(match) {
       ? compactEvents.map((event) => ({
           team: teamFromCodeMap[event[0]],
           type: eventTypeFromCodeMap[event[1]] || "goal",
-          player: event[2],
+          player: formatPlayerName(event[2]),
           minute: Number(event[3]) || 0,
           phase: phaseFromCodeMap[event[4]] || "regulation",
         }))
@@ -1145,6 +1145,18 @@ function expandHistoryPayload(payload) {
 
 function getScorerOverrideKey(name, team) {
   return `${normalizePlayerName(name)}::${team}`;
+}
+
+function normalizeHistoryPlayers(matches) {
+  return matches.map((match) => ({
+    ...match,
+    events: Array.isArray(match.events)
+      ? match.events.map((event) => ({
+          ...event,
+          player: formatPlayerName(event.player),
+        }))
+      : [],
+  }));
 }
 
 function editScorerGoals(name, team, currentGoals) {
