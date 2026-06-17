@@ -1309,15 +1309,28 @@ function normalizePlayerName(name) {
     .toLocaleLowerCase("pt-BR");
 }
 
+function formatPlayerName(name) {
+  return String(name)
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => {
+      const lower = part.toLocaleLowerCase("pt-BR");
+      return lower.charAt(0).toLocaleUpperCase("pt-BR") + lower.slice(1);
+    })
+    .join(" ");
+}
+
 function getCanonicalPlayerName(name) {
-  const cleaned = String(name).trim().replace(/\s+/g, " ");
+  const cleaned = formatPlayerName(name);
   const normalized = normalizePlayerName(cleaned);
   const existing = collectKnownPlayers().find((player) => normalizePlayerName(player) === normalized);
-  return existing || cleaned;
+  return existing ? formatPlayerName(existing) : cleaned;
 }
 
 function upsertKnownPlayer(map, name) {
-  const cleaned = String(name).trim().replace(/\s+/g, " ");
+  const cleaned = formatPlayerName(name);
   if (!cleaned) return;
 
   const key = normalizePlayerName(cleaned);
