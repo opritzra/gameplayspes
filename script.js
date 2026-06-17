@@ -130,6 +130,10 @@ nextHistoryBtn.addEventListener("click", () => changeHistoryPage(1));
 downloadTokenBtn.addEventListener("click", downloadHistoryToken);
 uploadTokenBtn.addEventListener("click", () => uploadTokenInput.click());
 uploadTokenInput.addEventListener("change", importHistoryTokenFromFile);
+playerName.addEventListener("input", handlePlayerInput);
+playerName.addEventListener("focus", handlePlayerInput);
+playerName.addEventListener("keydown", handlePlayerSuggestionKeydown);
+document.addEventListener("click", handleDocumentClick);
 
 renderHistory();
 renderForms();
@@ -187,7 +191,7 @@ function addEvent() {
 
   const team = teamSelect.value;
   const type = eventType.value;
-  const player = playerName.value.trim();
+  const player = getCanonicalPlayerName(playerName.value);
   const minute = Number(eventMinute.value);
   const minuteRange = getMinuteRange(activeMatch.phase);
 
@@ -217,6 +221,7 @@ function addEvent() {
   }
 
   playerName.value = "";
+  hidePlayerSuggestions();
   eventMinute.value = "";
   renderActiveMatch();
 }
@@ -640,8 +645,9 @@ function buildScorersRanking() {
   history.forEach((match) => {
     (match.events || []).forEach((event) => {
       if (event.type !== "goal") return;
-      const key = `${event.player}::${event.team}`;
-      const current = scorers.get(key) || { name: event.player, team: event.team, goals: 0 };
+      const playerDisplayName = getCanonicalPlayerName(event.player);
+      const key = `${normalizePlayerName(event.player)}::${event.team}`;
+      const current = scorers.get(key) || { name: playerDisplayName, team: event.team, goals: 0 };
       current.goals += 1;
       scorers.set(key, current);
     });
@@ -658,8 +664,9 @@ function buildCardsRanking() {
   history.forEach((match) => {
     (match.events || []).forEach((event) => {
       if (event.type !== "yellow" && event.type !== "red") return;
-      const key = `${event.player}::${event.team}`;
-      const current = cards.get(key) || { name: event.player, team: event.team, total: 0, red: 0 };
+      const playerDisplayName = getCanonicalPlayerName(event.player);
+      const key = `${normalizePlayerName(event.player)}::${event.team}`;
+      const current = cards.get(key) || { name: playerDisplayName, team: event.team, total: 0, red: 0 };
       current.total += 1;
       if (event.type === "red") current.red += 1;
       cards.set(key, current);
@@ -1064,24 +1071,29 @@ function getErrorMessage(error, fallbackMessage) {
 }
 
 function renderPlayerSuggestions() {
-  const names = collectKnownPlayers();
-  playerSuggestions.innerHTML = names
-    .map((name) => `<option value="${escapeHtml(name)}"></option>`)
-    .join("");
+  hidePlayerSuggestions();
 }
 
 function collectKnownPlayers() {
-  const names = new Set();
+  const names = new Map();
 
   history.forEach((match) => {
     (match.events || []).forEach((event) => {
       if (event.player) {
-        names.add(event.player);
+        upsertKnownPlayer(names, event.player);
       }
     });
   });
 
-  return [...names].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  if (activeMatch) {
+    (activeMatch.events || []).forEach((event) => {
+      if (event.player) {
+        upsertKnownPlayer(names, event.player);
+      }
+    });
+  }
+
+  return [...names.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
 function escapeHtml(value) {
@@ -1090,6 +1102,122 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+function handlePlayerInput() {
+  const query = playerName.value.trim();
+  const players = collectKnownPlayers();
+  const filtered = !query
+    ? players.slice(0, 8)
+    : players
+        .filter((name) => normalizePlayerName(name).includes(normalizePlayerName(query)))
+        .slice(0, 8);
+
+  if (filtered.length === 0) {
+    hidePlayerSuggestions();
+    return;
+  }
+
+  playerSuggestions.innerHTML = filtered
+    .map((name, index) => `
+      <button class="player-suggestion-item${index === 0 ? " active" : ""}" type="button" data-player-name="${escapeHtml(name)}">
+        ${escapeHtml(name)}
+      </button>
+    `)
+    .join("");
+
+  playerSuggestions.querySelectorAll(".player-suggestion-item").forEach((button) => {
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      applyPlayerSuggestion(button.dataset.playerName || "");
+    });
+  });
+
+  playerSuggestions.classList.remove("hidden");
+}
+
+function handlePlayerSuggestionKeydown(event) {
+  if (playerSuggestions.classList.contains("hidden")) return;
+
+  const items = [...playerSuggestions.querySelectorAll(".player-suggestion-item")];
+  if (items.length === 0) return;
+
+  const activeIndex = items.findIndex((item) => item.classList.contains("active"));
+
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    setActiveSuggestion(items, Math.min(activeIndex + 1, items.length - 1));
+    return;
+  }
+
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    setActiveSuggestion(items, Math.max(activeIndex - 1, 0));
+    return;
+  }
+
+  if (event.key === "Enter") {
+    const activeItem = items[activeIndex >= 0 ? activeIndex : 0];
+    if (activeItem) {
+      event.preventDefault();
+      applyPlayerSuggestion(activeItem.dataset.playerName || "");
+    }
+    return;
+  }
+
+  if (event.key === "Escape") {
+    hidePlayerSuggestions();
+  }
+}
+
+function setActiveSuggestion(items, index) {
+  items.forEach((item, itemIndex) => {
+    item.classList.toggle("active", itemIndex === index);
+  });
+}
+
+function applyPlayerSuggestion(name) {
+  playerName.value = name;
+  hidePlayerSuggestions();
+}
+
+function hidePlayerSuggestions() {
+  playerSuggestions.classList.add("hidden");
+  playerSuggestions.innerHTML = "";
+}
+
+function handleDocumentClick(event) {
+  if (event.target === playerName || playerSuggestions.contains(event.target)) {
+    return;
+  }
+
+  hidePlayerSuggestions();
+}
+
+function normalizePlayerName(name) {
+  return String(name)
+    .trim()
+    .replace(/\s+/g, " ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR");
+}
+
+function getCanonicalPlayerName(name) {
+  const cleaned = String(name).trim().replace(/\s+/g, " ");
+  const normalized = normalizePlayerName(cleaned);
+  const existing = collectKnownPlayers().find((player) => normalizePlayerName(player) === normalized);
+  return existing || cleaned;
+}
+
+function upsertKnownPlayer(map, name) {
+  const cleaned = String(name).trim().replace(/\s+/g, " ");
+  if (!cleaned) return;
+
+  const key = normalizePlayerName(cleaned);
+  if (!map.has(key)) {
+    map.set(key, cleaned);
+  }
 }
 
 function describeDate(isoDate) {

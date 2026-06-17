@@ -380,6 +380,10 @@ select {
   color: var(--muted);
 }
 
+.player-autocomplete {
+  position: relative;
+}
+
 .control-grid input,
 .control-grid select {
   width: 100%;
@@ -388,6 +392,39 @@ select {
   border: 1px solid #cad7c5;
   background: #fff;
   color: var(--text);
+}
+
+.player-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid #cad7c5;
+  background: #fff;
+  box-shadow: 0 16px 32px rgba(23, 33, 27, 0.12);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.player-suggestion-item {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.player-suggestion-item:hover,
+.player-suggestion-item.active {
+  background: #edf4e9;
 }
 
 .action-row {

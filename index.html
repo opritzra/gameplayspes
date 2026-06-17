@@ -97,8 +97,10 @@
 
             <label>
               Jogador
-              <input id="playerName" type="text" placeholder="Nome do jogador" list="playerSuggestions" autocomplete="off">
-              <datalist id="playerSuggestions"></datalist>
+              <div class="player-autocomplete">
+                <input id="playerName" type="text" placeholder="Nome do jogador" autocomplete="off">
+                <div id="playerSuggestions" class="player-suggestions hidden"></div>
+              </div>
             </label>
 
             <label>
