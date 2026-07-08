@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokedex</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: Verdana, Tahoma, "Segoe UI", sans-serif;
+      color: #eef6ff;
+      background:
+        radial-gradient(circle at 50% 14%, rgba(27, 140, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, #03111f 0%, #01060d 100%);
+    }
+
+    .page {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .shell {
+      position: relative;
+      width: min(1820px, 100%);
+      padding: 22px 22px 30px;
+      border-radius: 34px;
+      border: 3px solid rgba(25, 131, 241, 0.9);
+      background:
+        radial-gradient(circle at 50% 40%, rgba(30, 101, 220, 0.09), transparent 42%),
+        linear-gradient(180deg, #082252 0%, #06183c 56%, #04132f 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(106, 179, 255, 0.18),
+        inset 0 -80px 140px rgba(1, 8, 20, 0.24),
+        0 24px 58px rgba(0, 0, 0, 0.42);
+    }
+
+    .shell::before {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: 28px;
+      border: 1px solid rgba(85, 162, 255, 0.18);
+      pointer-events: none;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 420px 1fr 250px;
+      gap: 26px;
+      align-items: center;
+      padding: 4px 8px 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: clamp(2.5rem, 4vw, 4rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.24);
+    }
+
+    .brand-ball {
+      position: relative;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #39bcff 0 50%, #dff2ff 50% 100%);
+      border: 4px solid #12305f;
+      box-shadow: 0 0 16px rgba(56, 180, 255, 0.2);
+    }
+
+    .brand-ball::before,
+    .brand-ball::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .brand-ball::before {
+      width: 56px;
+      height: 6px;
+      background: #12305f;
+    }
+
+    .brand-ball::after {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #eaf7ff;
+      border: 4px solid #12305f;
+    }
+
+    .search {
+      position: relative;
+      height: 70px;
+      border-radius: 18px;
+      border: 2px solid rgba(25, 122, 226, 0.78);
+      background: linear-gradient(180deg, rgba(8, 32, 80, 0.96), rgba(5, 22, 57, 0.98));
+      box-shadow: inset 0 0 0 1px rgba(112, 184, 255, 0.06);
+    }
+
+    .search input {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #eef6ff;
+      font: 500 1rem Verdana, Tahoma, "Segoe UI", sans-serif;
+      padding: 0 64px 0 22px;
+    }
+
+    .search input::placeholder {
+      color: rgba(221, 238, 255, 0.62);
+    }
+
+    .search-icon {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      width: 20px;
+      height: 20px;
+      border: 4px solid #3499ff;
+      border-radius: 50%;
+      transform: translateY(-50%);
+    }
+
+    .search-icon::after {
+      content: "";
+      position: absolute;
+      right: -8px;
+      bottom: -8px;
+      width: 10px;
+      height: 4px;
+      background: #3499ff;
+      transform: rotate(45deg);
+      border-radius: 4px;
+    }
+
+    .captured {
+      height: 88px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 18px;
+      border-radius: 18px;
+      border: 2px solid rgba(25, 122, 226, 0.78);
+      background: linear-gradient(180deg, rgba(8, 32, 80, 0.96), rgba(5, 22, 57, 0.98));
+    }
+
+    .captured-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.95rem;
+    }
+
+    .captured-copy strong {
+      color: #35b0ff;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 500px 1fr 470px;
+      gap: 18px;
+      min-height: 900px;
+    }
+
+    .panel {
+      position: relative;
+      border-radius: 24px;
+      border: 2px solid rgba(25, 122, 226, 0.76);
+      background:
+        radial-gradient(circle at 50% 35%, rgba(20, 113, 232, 0.06), transparent 42%),
+        linear-gradient(180deg, rgba(8, 33, 80, 0.96), rgba(5, 20, 51, 0.98));
+      box-shadow: inset 0 0 0 1px rgba(113, 183, 255, 0.05);
+      overflow: hidden;
+    }
+
+    .left {
+      padding: 16px 14px 18px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .filter {
+      min-width: 46px;
+      height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(30, 129, 239, 0.34);
+      background: linear-gradient(180deg, rgba(9, 37, 92, 0.95), rgba(6, 25, 63, 0.98));
+      color: #dfefff;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .filter.active {
+      background: linear-gradient(180deg, #246fcb, #174b97);
+      border-color: rgba(90, 171, 255, 0.6);
+    }
+
+    .filter .drop,
+    .filter .leaf,
+    .filter .bolt,
+    .filter .ghost,
+    .filter .mound,
+    .filter .star {
+      width: 18px;
+      height: 18px;
+      position: relative;
+      display: inline-block;
+    }
+
+    .filter .fire {
+      width: 16px;
+      height: 22px;
+      background: linear-gradient(180deg, #ff9c53, #ff4b37);
+      clip-path: polygon(50% 0, 82% 30%, 68% 48%, 100% 100%, 56% 78%, 42% 100%, 0 68%, 20% 42%, 14% 24%);
+    }
+
+    .filter .drop {
+      background: linear-gradient(180deg, #4fb6ff, #1a7cf6);
+      clip-path: polygon(50% 0, 74% 34%, 86% 60%, 50% 100%, 14% 60%, 26% 34%);
+    }
+
+    .filter .leaf {
+      background: linear-gradient(180deg, #7fe771, #39b85d);
+      clip-path: polygon(100% 0, 82% 70%, 28% 100%, 0 54%, 58% 8%);
+    }
+
+    .filter .bolt {
+      background: linear-gradient(180deg, #ffd454, #f8a814);
+      clip-path: polygon(44% 0, 100% 0, 62% 50%, 88% 50%, 22% 100%, 42% 58%, 10% 58%);
+    }
+
+    .filter .ghost {
+      background: linear-gradient(180deg, #9067ef, #633fc0);
+      border-radius: 50% 50% 28% 28%;
+      box-shadow: inset 0 -6px 0 rgba(28, 18, 86, 0.2);
+    }
+
+    .filter .mound {
+      background: linear-gradient(180deg, #bb9057, #875f30);
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    }
+
+    .filter .star {
+      background: linear-gradient(180deg, #d0e7ff, #7db2ff);
+      clip-path: polygon(50% 0, 62% 36%, 100% 50%, 62% 64%, 50% 100%, 38% 64%, 0 50%, 38% 36%);
+    }
+
+    .list {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .entry {
+      display: grid;
+      grid-template-columns: 56px 1fr auto 28px;
+      gap: 16px;
+      align-items: center;
+      min-height: 84px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(28, 129, 236, 0.34);
+      background: linear-gradient(180deg, rgba(10, 39, 94, 0.95), rgba(7, 27, 67, 0.98));
+    }
+
+    .entry.active {
+      background: linear-gradient(180deg, #2477d8, #1454b6);
+      box-shadow:
+        inset 0 0 0 1px rgba(169, 221, 255, 0.08),
+        0 0 18px rgba(41, 165, 255, 0.18);
+    }
+
+    .entry-copy small {
+      display: block;
+      color: rgba(227, 240, 255, 0.7);
+      font-size: 0.78rem;
+      margin-bottom: 4px;
+    }
+
+    .entry-copy strong {
+      font-size: 0.98rem;
+    }
+
+    .type-pill {
+      min-width: 74px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-align: center;
+      color: #fff;
+    }
+
+    .grass { background: linear-gradient(180deg, #5cb93d, #40942c); }
+    .water { background: linear-gradient(180deg, #4192ff, #2c68d8); }
+    .fire-type { background: linear-gradient(180deg, #ff6a58, #d74433); }
+    .electric { background: linear-gradient(180deg, #f2c739, #d7a216); }
+    .ground { background: linear-gradient(180deg, #b98954, #916032); }
+    .flying { background: linear-gradient(180deg, #79b6ff, #6198e0); }
+    .psychic { background: linear-gradient(180deg, #ec76bf, #c05098); }
+    .dark { background: linear-gradient(180deg, #80539e, #613d7d); }
+
+    .tiny-ball {
+      position: relative;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #fc6a63 0 50%, #eef6ff 50% 100%);
+      border: 2px solid #17325f;
+    }
+
+    .tiny-ball::before,
+    .tiny-ball::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .tiny-ball::before {
+      width: 24px;
+      height: 3px;
+      background: #17325f;
+    }
+
+    .tiny-ball::after {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #eef6ff;
+      border: 2px solid #17325f;
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding-top: 16px;
+    }
+
+    .page-btn,
+    .page-num {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(9, 37, 92, 0.95), rgba(6, 25, 63, 0.98));
+      border: 1px solid rgba(28, 129, 236, 0.3);
+      font-weight: 700;
+    }
+
+    .page-num.active {
+      background: linear-gradient(180deg, #2477d8, #1454b6);
+      box-shadow: 0 0 12px rgba(43, 168, 255, 0.18);
+    }
+
+    .center {
+      padding: 24px 24px 22px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .center-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .center-copy small {
+      display: block;
+      color: rgba(222, 239, 255, 0.82);
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    .center-copy h2 {
+      margin: 0 0 8px;
+      font-size: clamp(2.4rem, 4vw, 4rem);
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .center-copy p {
+      margin: 0;
+      color: #33a5ff;
+      font-size: 0.95rem;
+    }
+
+    .type-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 16px;
+      border: 1px solid rgba(41, 160, 128, 0.42);
+      background: linear-gradient(180deg, rgba(9, 59, 80, 0.92), rgba(8, 41, 56, 0.96));
+      display: grid;
+      place-items: center;
+    }
+
+    .type-icon .leaf {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(180deg, #7fe771, #39b85d);
+      clip-path: polygon(100% 0, 82% 70%, 28% 100%, 0 54%, 58% 8%);
+    }
+
+    .monster-stage {
+      position: relative;
+      flex: 1;
+      min-height: 420px;
+      margin: 6px 0 18px;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 50% 54%, rgba(31, 170, 255, 0.13), transparent 18%),
+        linear-gradient(180deg, rgba(7, 33, 81, 0.28), rgba(5, 19, 47, 0.16));
+      overflow: hidden;
+    }
+
+    .monster-stage::before {
+      content: "";
+      position: absolute;
+      inset: 24px;
+      background:
+        linear-gradient(rgba(38, 110, 206, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(38, 110, 206, 0.12) 1px, transparent 1px);
+      background-size: 30px 30px;
+      mask: radial-gradient(circle at 50% 46%, black 0, black 54%, transparent 82%);
+    }
+
+    .monster-stage::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 32px;
+      width: 260px;
+      height: 54px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      border: 2px solid rgba(34, 156, 255, 0.62);
+      box-shadow:
+        0 0 0 18px rgba(23, 130, 241, 0.08),
+        0 0 0 36px rgba(23, 130, 241, 0.04);
+    }
+
+    .arrow-btn {
+      position: absolute;
+      top: 50%;
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      border: 2px solid rgba(30, 129, 236, 0.58);
+      background: linear-gradient(180deg, rgba(10, 40, 92, 0.96), rgba(7, 27, 67, 0.98));
+      transform: translateY(-50%);
+      box-shadow: inset 0 0 0 1px rgba(120, 187, 255, 0.05);
+    }
+
+    .arrow-btn.left { left: 18px; }
+    .arrow-btn.right { right: 18px; }
+
+    .arrow-btn::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16px;
+      height: 16px;
+      border-top: 4px solid #eef6ff;
+      border-right: 4px solid #eef6ff;
+      transform-origin: center;
+    }
+
+    .arrow-btn.left::before {
+      transform: translate(-35%, -50%) rotate(-135deg);
+    }
+
+    .arrow-btn.right::before {
+      transform: translate(-65%, -50%) rotate(45deg);
+    }
+
+    .monster {
+      position: absolute;
+      left: 50%;
+      bottom: 40px;
+      width: 300px;
+      height: 380px;
+      transform: translateX(-50%);
+    }
+
+    .monster .body,
+    .monster .head,
+    .monster .ear,
+    .monster .arm,
+    .monster .leg,
+    .monster .tail,
+    .monster .leaf-collar,
+    .monster .eye,
+    .monster .snout {
+      position: absolute;
+    }
+
+    .monster .head {
+      left: 84px;
+      top: 62px;
+      width: 136px;
+      height: 126px;
+      border-radius: 48% 48% 44% 44%;
+      background: linear-gradient(180deg, #89dd44, #4baa2c);
+      box-shadow: inset 0 -10px 0 rgba(37, 106, 23, 0.16);
+    }
+
+    .monster .ear {
+      width: 70px;
+      height: 120px;
+      border-radius: 48% 48% 14% 14%;
+      background: linear-gradient(180deg, #8be145, #4cab2c);
+      border: 3px solid rgba(33, 98, 29, 0.42);
+      top: 8px;
+    }
+
+    .monster .ear.left {
+      left: 62px;
+      transform: rotate(-18deg);
+    }
+
+    .monster .ear.right {
+      right: 54px;
+      transform: rotate(18deg);
+    }
+
+    .monster .ear::before {
+      content: "";
+      position: absolute;
+      inset: 18px 14px 18px;
+      border-radius: 46% 46% 16% 16%;
+      background: linear-gradient(180deg, #fff7b4, #ece4a0);
+    }
+
+    .monster .body {
+      left: 88px;
+      bottom: 66px;
+      width: 130px;
+      height: 136px;
+      border-radius: 44% 44% 34% 34%;
+      background: linear-gradient(180deg, #8fe349, #56af2f);
+      box-shadow: inset 0 -12px 0 rgba(37, 106, 23, 0.18);
+    }
+
+    .monster .body::before {
+      content: "";
+      position: absolute;
+      left: 24px;
+      top: 20px;
+      width: 82px;
+      height: 90px;
+      border-radius: 42% 42% 38% 38%;
+      background: linear-gradient(180deg, #fff4bc, #d9e79d);
+    }
+
+    .monster .arm {
+      width: 46px;
+      height: 82px;
+      border-radius: 40px;
+      background: linear-gradient(180deg, #7dd83e, #53a42e);
+      top: 166px;
+    }
+
+    .monster .arm.left {
+      left: 58px;
+      transform: rotate(28deg);
+    }
+
+    .monster .arm.right {
+      right: 58px;
+      transform: rotate(-30deg);
+    }
+
+    .monster .leg {
+      width: 46px;
+      height: 84px;
+      border-radius: 32px;
+      background: linear-gradient(180deg, #74d43a, #4d982b);
+      bottom: 8px;
+    }
+
+    .monster .leg.left {
+      left: 84px;
+      transform: rotate(4deg);
+    }
+
+    .monster .leg.right {
+      right: 82px;
+      transform: rotate(-2deg);
+    }
+
+    .monster .tail {
+      right: 28px;
+      bottom: 116px;
+      width: 82px;
+      height: 102px;
+      border-radius: 0 50% 50% 50%;
+      background: linear-gradient(180deg, #89df45, #57ac2f);
+      transform: rotate(26deg);
+    }
+
+    .monster .tail::before {
+      content: "";
+      position: absolute;
+      inset: 12px 14px 12px;
+      border-radius: 0 50% 50% 50%;
+      background: linear-gradient(180deg, #96ea58, #6fc63d);
+    }
+
+    .monster .leaf-collar {
+      left: 78px;
+      top: 176px;
+      width: 152px;
+      height: 66px;
+    }
+
+    .monster .leaf-collar::before,
+    .monster .leaf-collar::after {
+      content: "";
+      position: absolute;
+      width: 62px;
+      height: 58px;
+      background: linear-gradient(180deg, #64ca37, #3b8c22);
+      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    }
+
+    .monster .leaf-collar::before {
+      left: 10px;
+      transform: rotate(-10deg);
+    }
+
+    .monster .leaf-collar::after {
+      right: 10px;
+      transform: rotate(10deg);
+    }
+
+    .monster .eye {
+      top: 118px;
+      width: 22px;
+      height: 34px;
+      border-radius: 50%;
+      background: #1f4c28;
+      box-shadow: inset 0 0 0 5px #7cf16b;
+    }
+
+    .monster .eye.left { left: 104px; }
+    .monster .eye.right { right: 102px; }
+
+    .monster .snout {
+      left: 112px;
+      top: 144px;
+      width: 82px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #fff4bc, #d9e79d);
+    }
+
+    .monster .snout::before {
+      content: "";
+      position: absolute;
+      left: 32px;
+      top: 16px;
+      width: 18px;
+      height: 10px;
+      border-bottom: 3px solid #2c4e1b;
+      border-radius: 0 0 12px 12px;
+      box-shadow:
+        -16px 0 0 -3px #2c4e1b,
+        16px 0 0 -3px #2c4e1b;
+    }
+
+    .desc {
+      min-height: 160px;
+      padding: 26px 22px;
+      border-radius: 18px;
+      border: 1px solid rgba(29, 129, 234, 0.34);
+      background: linear-gradient(180deg, rgba(7, 28, 69, 0.96), rgba(4, 18, 45, 0.98));
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: rgba(231, 242, 255, 0.88);
+    }
+
+    .right {
+      padding: 18px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .side-section {
+      border-radius: 18px;
+      border: 1px solid rgba(29, 129, 234, 0.32);
+      background: linear-gradient(180deg, rgba(8, 31, 77, 0.95), rgba(5, 21, 52, 0.98));
+      padding: 14px;
+    }
+
+    .side-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 12px;
+      color: #35b0ff;
+      font-size: 0.92rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .side-title::before {
+      content: "";
+      width: 20px;
+      height: 20px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #2ca7ff, #155dc6);
+      box-shadow: inset 0 0 0 4px rgba(231, 246, 255, 0.14);
+    }
+
+    .info-table {
+      border-radius: 14px;
+      border: 1px solid rgba(29, 129, 234, 0.22);
+      overflow: hidden;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 16px;
+      min-height: 52px;
+      padding: 0 16px;
+      background: rgba(2, 15, 37, 0.12);
+    }
+
+    .info-row + .info-row {
+      border-top: 1px solid rgba(29, 129, 234, 0.14);
+    }
+
+    .info-row strong {
+      font-weight: 500;
+      color: rgba(229, 241, 255, 0.84);
+    }
+
+    .info-row span {
+      font-weight: 700;
+    }
+
+    .attr-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .attr-row {
+      display: grid;
+      grid-template-columns: 24px 100px 1fr 34px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .attr-icon {
+      width: 18px;
+      height: 18px;
+      position: relative;
+    }
+
+    .attr-icon.heart::before,
+    .attr-icon.sword::before,
+    .attr-icon.shield::before,
+    .attr-icon.star::before,
+    .attr-icon.hex::before,
+    .attr-icon.speed::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: auto;
+    }
+
+    .attr-icon.heart::before {
+      width: 14px;
+      height: 12px;
+      background: linear-gradient(180deg, #6ee05d, #2fae43);
+      transform: rotate(-45deg);
+      border-radius: 4px 4px 2px 2px;
+      top: 4px;
+      left: 2px;
+      box-shadow:
+        6px -6px 0 0 #58cf4a,
+        0 -6px 0 0 #58cf4a;
+    }
+
+    .attr-icon.sword::before {
+      width: 16px;
+      height: 4px;
+      background: #ff9a43;
+      transform: rotate(45deg);
+      box-shadow: 0 0 0 2px rgba(255, 154, 67, 0.18);
+    }
+
+    .attr-icon.shield::before {
+      width: 14px;
+      height: 16px;
+      background: linear-gradient(180deg, #ffc945, #dba715);
+      clip-path: polygon(50% 0, 88% 18%, 88% 62%, 50% 100%, 12% 62%, 12% 18%);
+    }
+
+    .attr-icon.star::before {
+      width: 16px;
+      height: 16px;
+      background: linear-gradient(180deg, #57b9ff, #2a7df3);
+      clip-path: polygon(50% 0, 62% 36%, 100% 50%, 62% 64%, 50% 100%, 38% 64%, 0 50%, 38% 36%);
+    }
+
+    .attr-icon.hex::before {
+      width: 14px;
+      height: 16px;
+      background: linear-gradient(180deg, #966cff, #6947d7);
+      clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    }
+
+    .attr-icon.speed::before {
+      width: 16px;
+      height: 6px;
+      background: #37d4ef;
+      border-radius: 6px;
+      transform: rotate(-45deg);
+      box-shadow:
+        6px 8px 0 -2px #37d4ef,
+        10px 12px 0 -3px #37d4ef;
+    }
+
+    .attr-track {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(10, 52, 110, 0.6);
+      overflow: hidden;
+    }
+
+    .attr-fill {
+      height: 100%;
+      border-radius: 999px;
+    }
+
+    .g1 { width: 45%; background: linear-gradient(180deg, #60d54a, #3eb847); }
+    .g2 { width: 49%; background: linear-gradient(180deg, #ff9c43, #f07b2c); }
+    .g3 { width: 49%; background: linear-gradient(180deg, #ffd34f, #ecb12e); }
+    .g4 { width: 65%; background: linear-gradient(180deg, #58b9ff, #2d7ef3); }
+    .g5 { width: 65%; background: linear-gradient(180deg, #9770ff, #6e51e1); }
+    .g6 { width: 45%; background: linear-gradient(180deg, #39d9ef, #29b7d4); }
+
+    .evo-list {
+      display: grid;
+      grid-template-columns: 1fr 40px 1fr 40px 1fr;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .evo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+      font-size: 0.82rem;
+    }
+
+    .mini-mon {
+      position: relative;
+      width: 74px;
+      height: 84px;
+    }
+
+    .mini-mon::before,
+    .mini-mon::after {
+      content: "";
+      position: absolute;
+      background: linear-gradient(180deg, #8de347, #54aa2f);
+    }
+
+    .mini-mon::before {
+      left: 18px;
+      top: 18px;
+      width: 38px;
+      height: 38px;
+      border-radius: 48% 48% 42% 42%;
+      box-shadow:
+        -12px 36px 0 -8px #54aa2f,
+        12px 36px 0 -8px #54aa2f;
+    }
+
+    .mini-mon::after {
+      left: 12px;
+      top: 0;
+      width: 16px;
+      height: 32px;
+      border-radius: 50% 50% 12% 12%;
+      transform: rotate(-18deg);
+      box-shadow: 32px 0 0 0 #54aa2f;
+    }
+
+    .mini-mon.mid::before {
+      transform: scale(1.08);
+    }
+
+    .mini-mon.last::before {
+      box-shadow:
+        -12px 36px 0 -8px #54aa2f,
+        12px 36px 0 -8px #54aa2f,
+        28px -2px 0 -16px #f6b5c4;
+    }
+
+    .arrow-evo {
+      width: 18px;
+      height: 18px;
+      border-top: 4px solid #43aefb;
+      border-right: 4px solid #43aefb;
+      transform: rotate(45deg);
+      justify-self: center;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 18px;
+      padding-top: 12px;
+      color: #2ea7ff;
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 1500px) {
+      .topbar,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        padding: 14px;
+      }
+
+      .stat-row {
+        grid-template-columns: 130px 1fr;
+      }
+
+      .stat-value {
+        grid-column: 2;
+        text-align: left;
+      }
+
+      .evo-list {
+        grid-template-columns: 1fr;
+      }
+
+      .arrow-evo {
+        transform: rotate(135deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-ball"></span>
+          <span>POKÉDEX</span>
+        </div>
+
+        <label class="search">
+          <input type="text" placeholder="Buscar Pokémon...">
+          <span class="search-icon"></span>
+        </label>
+
+        <div class="captured">
+          <span class="brand-ball"></span>
+          <div class="captured-copy">
+            <span>Capturados</span>
+            <strong>128 / 898</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="grid">
+        <aside class="panel left">
+          <div class="filters">
+            <span class="filter active">Todos</span>
+            <span class="filter"><span class="fire"></span></span>
+            <span class="filter"><span class="drop"></span></span>
+            <span class="filter"><span class="leaf"></span></span>
+            <span class="filter"><span class="bolt"></span></span>
+            <span class="filter"><span class="ghost"></span></span>
+            <span class="filter"><span class="mound"></span></span>
+            <span class="filter"><span class="star"></span></span>
+          </div>
+
+          <div class="list">
+            <div class="entry active">
+              <div class="mini-mon"></div>
+              <div class="entry-copy"><small>#001</small><strong>Florabit</strong></div>
+              <span class="type-pill grass">GRASS</span>
+              <span class="tiny-ball"></span>
+            </div>
+            <div class="entry">
+              <div class="mini-mon" style="filter:hue-rotate(110deg) saturate(1.1);"></div>
+              <div class="entry-copy"><small>#002</small><strong>Aquarept</strong></div>
+              <span class="type-pill water">WATER</span>
+              <span class="tiny-ball"></span>
+            </div>
+            <div class="entry">
+              <div class="mini-mon" style="filter:hue-rotate(-60deg) saturate(1.35);"></div>
+              <div class="entry-copy"><small>#003</small><strong>Pyronix</strong></div>
+              <span class="type-pill fire-type">FIRE</span>
+              <span class="tiny-ball"></span>
+            </div>
+            <div class="entry">
+              <div class="mini-mon" style="filter:hue-rotate(35deg) saturate(1.15) brightness(1.08);"></div>
+              <div class="entry-copy"><small>#004</small><strong>Volturex</strong></div>
+              <span class="type-pill electric">ELECTRIC</span>
+              <span class="tiny-ball"></span>
+            </div>
+            <div class="entry">
+              <div class="mini-mon" style="filter:hue-rotate(-18deg) saturate(0.8) brightness(0.92);"></div>
+              <div class="entry-copy"><small>#005</small><strong>Terranox</strong></div>
+              <span class="type-pill ground">GROUND</span>
+              <span class="tiny-ball"></span>
+            </div>
+            <div class="entry">
+              <div class="mini-mon" style="filter:hue-rotate(150deg) saturate(0.5) brightness(1.32);"></div>
+              <div class="entry-copy"><small>#006</small><strong>Zephyowl</strong></div>
+              <span class="type-pill flying">FLYING</span>
+              <span class="tiny-ball"></span>
+            </div>
+            <div class="entry">
+              <div class="mini-mon" style="filter:hue-rotate(230deg) saturate(0.9) brightness(1.24);"></div>
+              <div class="entry-copy"><small>#007</small><strong>Lumina</strong></div>
+              <span class="type-pill psychic">PSYCHIC</span>
+              <span class="tiny-ball"></span>
+            </div>
+            <div class="entry">
+              <div class="mini-mon" style="filter:hue-rotate(260deg) saturate(0.7) brightness(0.82);"></div>
+              <div class="entry-copy"><small>#008</small><strong>Shadowlurk</strong></div>
+              <span class="type-pill dark">DARK</span>
+              <span class="tiny-ball"></span>
+            </div>
+          </div>
+
+          <div class="pager">
+            <span class="page-btn">&#8249;</span>
+            <span class="page-num active">1</span>
+            <span class="page-num">2</span>
+            <span class="page-num">3</span>
+            <span class="page-num">...</span>
+            <span class="page-num">113</span>
+            <span class="page-btn">&#8250;</span>
+          </div>
+        </aside>
+
+        <section class="panel center">
+          <div class="center-top">
+            <div class="center-copy">
+              <small>#001</small>
+              <h2>Florabit</h2>
+              <p>Pokémon Semente</p>
+            </div>
+            <div class="type-icon"><span class="leaf"></span></div>
+          </div>
+
+          <div class="monster-stage">
+            <span class="arrow-btn left"></span>
+            <span class="arrow-btn right"></span>
+            <div class="monster">
+              <div class="ear left"></div>
+              <div class="ear right"></div>
+              <div class="head"></div>
+              <div class="eye left"></div>
+              <div class="eye right"></div>
+              <div class="snout"></div>
+              <div class="leaf-collar"></div>
+              <div class="body"></div>
+              <div class="arm left"></div>
+              <div class="arm right"></div>
+              <div class="leg left"></div>
+              <div class="leg right"></div>
+              <div class="tail"></div>
+            </div>
+          </div>
+
+          <div class="desc">
+            Florabit são curiosos e amigáveis. Suas folhas liberam um aroma calmante que relaxa aqueles que estão por perto.
+          </div>
+        </section>
+
+        <aside class="panel right">
+          <section class="side-section">
+            <h3 class="side-title">Informações</h3>
+            <div class="info-table">
+              <div class="info-row"><strong>Tipo</strong><span class="type-pill grass">GRASS</span></div>
+              <div class="info-row"><strong>Altura</strong><span>0.4 m</span></div>
+              <div class="info-row"><strong>Peso</strong><span>6.5 kg</span></div>
+              <div class="info-row"><strong>Habitat</strong><span>Florestas</span></div>
+              <div class="info-row"><strong>Habilidade</strong><span>Folhagem</span></div>
+            </div>
+          </section>
+
+          <section class="side-section">
+            <h3 class="side-title">Atributos</h3>
+            <div class="attr-list">
+              <div class="attr-row"><span class="attr-icon heart"></span><span>HP</span><span class="attr-track"><span class="attr-fill g1"></span></span><strong>45</strong></div>
+              <div class="attr-row"><span class="attr-icon sword"></span><span>Ataque</span><span class="attr-track"><span class="attr-fill g2"></span></span><strong>49</strong></div>
+              <div class="attr-row"><span class="attr-icon shield"></span><span>Defesa</span><span class="attr-track"><span class="attr-fill g3"></span></span><strong>49</strong></div>
+              <div class="attr-row"><span class="attr-icon star"></span><span>At. Esp.</span><span class="attr-track"><span class="attr-fill g4"></span></span><strong>65</strong></div>
+              <div class="attr-row"><span class="attr-icon hex"></span><span>Def. Esp.</span><span class="attr-track"><span class="attr-fill g5"></span></span><strong>65</strong></div>
+              <div class="attr-row"><span class="attr-icon speed"></span><span>Velocidade</span><span class="attr-track"><span class="attr-fill g6"></span></span><strong>45</strong></div>
+            </div>
+          </section>
+
+          <section class="side-section">
+            <h3 class="side-title">Evoluções</h3>
+            <div class="evo-list">
+              <div class="evo">
+                <div class="mini-mon"></div>
+                <span>Florabit</span>
+                <small>Nível 16</small>
+              </div>
+              <span class="arrow-evo"></span>
+              <div class="evo">
+                <div class="mini-mon mid"></div>
+                <span>Florania</span>
+                <small>Nível 32</small>
+              </div>
+              <span class="arrow-evo"></span>
+              <div class="evo">
+                <div class="mini-mon last"></div>
+                <span>Floranher</span>
+                <small>&nbsp;</small>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <footer class="footer">
+        <span>Dados atualizados em 30/06/2026</span>
+        <span>•</span>
+        <span>v1.0</span>
+      </footer>
+    </section>
+  </main>
+</body>
+</html>
